@@ -41,7 +41,9 @@ def login_required(f):
 
 @app.route('/')
 def index():
-    return "AutoTrack Database and Seed Mechanism Ready!"
+    if 'user_id' in session:
+        return redirect(url_for('dashboard'))
+    return render_template('index.html')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
