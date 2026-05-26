@@ -72,5 +72,11 @@ def login():
         flash(result['error'], 'danger')
     return render_template('login.html')
 
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash('You have been successfully logged out.', 'info')
+    return redirect(url_for('index'))
+
 if __name__ == '__main__':
     app.run(debug=True)
