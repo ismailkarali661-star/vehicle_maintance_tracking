@@ -1,7 +1,7 @@
 import sqlite3
 from functools import wraps
 from flask import Flask, g, session, flash, redirect, url_for, render_template, request
-from services import register_user, login_user
+from services import register_user, login_user, get_vehicles_by_user, add_vehicle
 
 app = Flask(__name__)
 app.secret_key = 'arac_bakim_secret_key_2024'
@@ -39,44 +39,16 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-@app.route('/')
-def index():
-    if 'user_id' in session:
-        return redirect(url_for('dashboard'))
-    return render_template('index.html')
-
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
-        result = register_user(get_db(),
-                               request.form['username'].strip(),
-                               request.form['email'].strip(),
-                               request.form['password'])
-        if result['success']:
-            flash('Registration successful! You can now log in.', 'success')
-            return redirect(url_for('login'))
-        flash(result['error'], 'danger')
-    return render_template('register.html')
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        result = login_user(get_db(),
-                            request.form['email'].strip(),
-                            request.form['password'])
-        if result['success']:
-            session['user_id'] = result['user']['id']
-            session['username'] = result['user']['username']
-            flash(f'Welcome, {result["user"]["username"]}!', 'success')
-            return redirect(url_for('dashboard'))
-        flash(result['error'], 'danger')
-    return render_template('login.html')
-
-@app.route('/logout')
-def logout():
-    session.clear()
-    flash('You have been successfully logged out.', 'info')
-    return redirect(url_for('index'))
-
-if __name__ == '__main__':
-    app.run(debug=True)
+def _catalog_data(db):
+    rows = db.execute('SELECT DISTINCT brand, model FROM vehicle_catalog ORDER BY brand, model').fetchall()
+    brands, models = [], {}
+    for row in rows:
+        b, m = row['brand'], row['model']
+        if b not in models:
+            brands.append(b)
+            models[b] = []
+        if m not in models[b]:
+            models[b].append(m)
+    engines = {}
+    for row in db.execute('SELECT brand, model, engine, fuel_type FROM engine_variants').fetchall():
+        b, m, e, ft = row['brand'], row['model'], row

@@ -36,3 +36,44 @@ def login_user(db, email, password):
         return {'success': False, 'error': 'Incorrect email or password.'}
 
     return {'success': True, 'user': dict(user)}
+
+def is_valid_year(year):
+    try:
+        y = int(year)
+        return 1900 <= y <= date.today().year + 1
+    except (ValueError, TypeError):
+        return False
+
+def is_positive_number(value):
+    try:
+        return float(value) >= 0
+    except (ValueError, TypeError):
+        return False
+
+def get_vehicles_by_user(db, user_id):
+    return db.execute(
+        'SELECT * FROM vehicles WHERE user_id = ? ORDER BY created_at DESC',
+        (user_id,)
+    ).fetchall()
+
+def add_vehicle(db, data):
+    if not data['brand'] or not data['model']:
+        return {'success': False, 'error': 'Brand and model are required.'}
+    if not is_valid_year(data['year']):
+        return {'success': False, 'error': 'Invalid year.'}
+    if not data['plate']:
+        return {'success': False, 'error': 'Plate number is required.'}
+    if not is_positive_number(data['current_km']):
+        return {'success': False, 'error': 'Invalid mileage value.'}
+    if db.execute('SELECT id FROM vehicles WHERE plate = ? AND user_id = ?',
+                  (data['plate'], data['user_id'])).fetchone():
+        return {'success': False, 'error': 'A vehicle with this plate number already exists.'}
+
+    db.execute('''INSERT INTO vehicles
+                  (user_id, brand, model, year, plate, current_km, fuel_type, motor, color, notes)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+               (data['user_id'], data['brand'], data['model'], data['year'],
+                data['plate'], data['current_km'], data['fuel_type'],
+                data.get('motor', ''), data['color'], data['notes']))
+    db.commit()
+    return {'success': True}
