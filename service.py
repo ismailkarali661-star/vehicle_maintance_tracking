@@ -102,3 +102,25 @@ def get_total_cost_by_vehicle(db, vehicle_id):
     f = db.execute('SELECT COALESCE(SUM(repair_cost),0) as t FROM faults WHERE vehicle_id=?',
                    (vehicle_id,)).fetchone()['t']
     return round(m + f, 2)
+
+def update_vehicle(db, vehicle_id, user_id, data):
+    if not data['brand'] or not data['model']:
+        return {'success': False, 'error': 'Brand and model are required.'}
+    if not is_valid_year(data['year']):
+        return {'success': False, 'error': 'Invalid year.'}
+    db.execute('''UPDATE vehicles SET brand=?, model=?, year=?, plate=?, current_km=?,
+                  fuel_type=?, motor=?, color=?, notes=? WHERE id=? AND user_id=?''',
+               (data['brand'], data['model'], data['year'], data['plate'],
+                data['current_km'], data['fuel_type'], data.get('motor', ''),
+                data['color'], data['notes'], vehicle_id, user_id))
+    db.commit()
+    return {'success': True}
+
+def delete_vehicle(db, vehicle_id, user_id):
+    if not get_vehicle(db, vehicle_id, user_id):
+        return {'success': False, 'error': 'Vehicle not found.'}
+    db.execute('DELETE FROM maintenances WHERE vehicle_id = ?', (vehicle_id,))
+    db.execute('DELETE FROM faults WHERE vehicle_id = ?', (vehicle_id,))
+    db.execute('DELETE FROM vehicles WHERE id = ? AND user_id = ?', (vehicle_id, user_id))
+    db.commit()
+    return {'success': True}
