@@ -1,0 +1,27 @@
+<script>
+    const catalogModels = {{ catalog_models | tojson }};
+    const engineData = {{ engine_data | tojson }};
+
+    document.getElementById('brand').addEventListener('change', function() {
+        const brand = this.value;
+        const modelSel = document.getElementById('model');
+        modelSel.innerHTML = '<option value="">Model seçin</option>';
+        (catalogModels[brand] || []).forEach(m => {
+            modelSel.innerHTML += `<option value="${m}">${m}</option>`;
+        });
+        document.getElementById('motor').innerHTML = '<option value="">Motor seçin</option>';
+    });
+
+    document.getElementById('model').addEventListener('change', function() {
+        const brand = document.getElementById('brand').value;
+        const model = this.value;
+        const motorSel = document.getElementById('motor');
+
+const brandEngines = engineData[brand] || [];
+
+brandEngines
+    .filter(e => e.model === model)
+    .forEach(e => {
+        motorSel.innerHTML += `<option value="${e.engine}">${e.engine}</option>`;
+    });
+</script>
