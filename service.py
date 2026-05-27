@@ -77,3 +77,28 @@ def add_vehicle(db, data):
                 data.get('motor', ''), data['color'], data['notes']))
     db.commit()
     return {'success': True}
+
+def get_vehicle(db, vehicle_id, user_id):
+    return db.execute(
+        'SELECT * FROM vehicles WHERE id = ? AND user_id = ?',
+        (vehicle_id, user_id)
+    ).fetchone()
+
+def get_maintenances(db, vehicle_id):
+    return db.execute(
+        'SELECT * FROM maintenances WHERE vehicle_id = ? ORDER BY date DESC',
+        (vehicle_id,)
+    ).fetchall()
+
+def get_faults(db, vehicle_id):
+    return db.execute(
+        'SELECT * FROM faults WHERE vehicle_id = ? ORDER BY date_reported DESC',
+        (vehicle_id,)
+    ).fetchall()
+
+def get_total_cost_by_vehicle(db, vehicle_id):
+    m = db.execute('SELECT COALESCE(SUM(cost),0) as t FROM maintenances WHERE vehicle_id=?',
+                   (vehicle_id,)).fetchone()['t']
+    f = db.execute('SELECT COALESCE(SUM(repair_cost),0) as t FROM faults WHERE vehicle_id=?',
+                   (vehicle_id,)).fetchone()['t']
+    return round(m + f, 2)
