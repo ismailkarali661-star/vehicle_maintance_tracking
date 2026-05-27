@@ -3,7 +3,8 @@ from functools import wraps
 from flask import Flask, g, session, flash, redirect, url_for, render_template, request
 from services import (
     register_user, login_user, get_vehicles_by_user, add_vehicle,
-    get_vehicle, get_maintenances, get_faults, get_total_cost_by_vehicle
+    get_vehicle, get_maintenances, get_faults, get_total_cost_by_vehicle,
+    update_vehicle_km
 )
 
 app = Flask(__name__)
@@ -144,6 +145,15 @@ def vehicle_detail(vehicle_id):
                            maintenances=get_maintenances(db, vehicle_id),
                            faults=get_faults(db, vehicle_id),
                            total_cost=get_total_cost_by_vehicle(db, vehicle_id))
+
+@app.route('/vehicles/<int:vehicle_id>/update-km', methods=['POST'])
+@login_required
+def update_vehicle_km_route(vehicle_id):
+    result = update_vehicle_km(get_db(), vehicle_id, session['user_id'],
+                               request.form.get('current_km', '').strip())
+    flash('Mileage updated successfully.' if result['success'] else result['error'],
+          'success' if result['success'] else 'danger')
+    return redirect(request.referrer or url_for('vehicles'))
 
 if __name__ == '__main__':
     app.run(debug=True)

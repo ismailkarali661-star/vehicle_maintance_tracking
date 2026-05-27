@@ -124,3 +124,11 @@ def delete_vehicle(db, vehicle_id, user_id):
     db.execute('DELETE FROM vehicles WHERE id = ? AND user_id = ?', (vehicle_id, user_id))
     db.commit()
     return {'success': True}
+
+def update_vehicle_km(db, vehicle_id, user_id, new_km):
+    if not is_positive_number(new_km):
+        return {'success': False, 'error': 'Invalid mileage value.'}
+    db.execute('UPDATE vehicles SET current_km=? WHERE id=? AND user_id=?',
+               (int(float(new_km)), vehicle_id, user_id))
+    db.commit()
+    return {'success': True}
