@@ -1,6 +1,6 @@
 import os
 import sqlite3
-import json as _json  # JSON string'lerini listeye çevirmek için eklendi
+import json as _json
 from functools import wraps
 from flask import Flask, g, session, flash, redirect, url_for, render_template, request
 from services import (
@@ -134,6 +134,30 @@ def logout():
     flash('You have been successfully logged out.', 'info')
     return redirect(url_for('index'))
 
+# Yeni eklenen merkezi Dashboard rotası
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    db = get_db()
+    user_id = session['user_id']
+    vehicles = get_vehicles_by_user(db, user_id)
+    costs = {v['id']: get_total_cost_by_vehicle(db, v['id']) for v in vehicles}
+
+    all_overdue, all_due = [], []
+    for v in vehicles:
+        analysis = get_maintenance_advisor_analysis(db, v['id'])
+        if analysis:
+            for item in analysis['overdue']:
+                all_overdue.append({**item, 'vehicle': v})
+            for item in analysis['due']:
+                all_due.append({**item, 'vehicle': v})
+
+    open_faults = _open_fault_counts(db, user_id)
+    return render_template('dashboard.html',
+                           vehicles=vehicles, costs=costs,
+                           all_overdue=all_overdue, all_due=all_due,
+                           open_faults=open_faults)
+
 @app.route('/vehicles')
 @login_required
 def vehicles():
@@ -237,7 +261,6 @@ def resolve_fault_route(vehicle_id, fault_id):
     flash('Fault marked as resolved.', 'success')
     return redirect(url_for('vehicle_detail', vehicle_id=vehicle_id))
 
-
 @app.route('/vehicles/<int:vehicle_id>/advisor')
 @login_required
 def vehicle_advisor(vehicle_id):
@@ -246,20 +269,7 @@ def vehicle_advisor(vehicle_id):
     if not vehicle:
         flash('Vehicle not found.', 'danger')
         return redirect(url_for('vehicles'))
-
     analysis = get_maintenance_advisor_analysis(db, vehicle_id)
-
-
-    guide_note = None
-    gn_row = db.execute(
-        'SELECT * FROM purchase_guide_notes WHERE brand=? AND model=? LIMIT 1',
-        (vehicle['brand'], vehicle['model'])
-    ).fetchone()
-
-    if gn_row:
-        guide_note = dict(gn_row)
-        guide_note['pros'] = _json.loads(guide_note['pros'] or '[]')
-        guide_note['cons'] = _json.loads(guide_note['cons'] or '[]')
 
     standard_items = ["Engine Oil Change", "Oil Filter Replacement", "Air Filter Inspection", "Cabin Filter Replacement"]
     maintenance_schedule = []
@@ -280,7 +290,7 @@ def vehicle_advisor(vehicle_id):
                            vehicle=vehicle,
                            analysis=analysis,
                            schedule=maintenance_schedule,
-                           guide_note=guide_note) # Şablona yeni veri gönderildi
+                           guide_note=None)
 
 @app.route('/vehicles/<int:vehicle_id>/update-km', methods=['POST'])
 @login_required

@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block content %}
+<h4>Dashboard</h4>
+
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h2>{{ vehicles|length }}</h2>
+                <p class="text-muted mb-0">Araç</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-danger">
+            <div class="card-body">
+                <h2 class="text-danger">{{ all_overdue|length }}</h2>
+                <p class="text-muted mb-0">Gecikmiş Bakım</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-warning">
+            <div class="card-body">
+                <h2 class="text-warning">{{ all_due|length }}</h2>
+                <p class="text-muted mb-0">Yaklaşan Bakım</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h2>{{ costs.values()|sum|int }} ₺</h2>
+                <p class="text-muted mb-0">Toplam Harcama</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{% for v in vehicles %}
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h5>{{ v.brand }} {{ v.model }} ({{ v.year }})</h5>
+                <small class="text-muted">{{ v.plate }} · {{ v.current_km|int }} km</small>
+            </div>
+            <div>
+                {% if open_faults.get(v.id) %}
+                <span class="badge bg-danger">{{ open_faults[v.id] }} arıza</span>
+                {% endif %}
+                <a href="{{ url_for('vehicle_detail', vehicle_id=v.id) }}" class="btn btn-sm btn-outline-primary">Detay</a>
+                <a href="{{ url_for('vehicle_advisor', vehicle_id=v.id) }}" class="btn btn-sm btn-outline-warning">Danışman</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
