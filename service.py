@@ -1,6 +1,6 @@
-import hashlib
+impimport hashlib
 import re
-from datetime import date
+from datetime import date, timedelta
 
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
@@ -185,7 +185,6 @@ def delete_maintenance(db, maintenance_id, vehicle_id):
     db.commit()
     return {'success': True}
 
-
 def search_maintenances(db, user_id, query, vehicle_id=None):
     params = [user_id]
     sql = '''SELECT m.*, v.brand, v.model, v.plate
@@ -199,3 +198,26 @@ def search_maintenances(db, user_id, query, vehicle_id=None):
         params.append(vehicle_id)
     sql += ' ORDER BY m.date DESC'
     return db.execute(sql, params).fetchall()
+
+def get_reminders(db, user_id):
+    today = date.today().isoformat()
+    future_date = (date.today() + timedelta(days=30)).isoformat()
+
+    date_reminders = db.execute('''
+        SELECT m.*, v.brand, v.model, v.plate, 'date' as reminder_type
+        FROM maintenances m JOIN vehicles v ON m.vehicle_id = v.id
+        WHERE v.user_id = ? AND m.next_service_date IS NOT NULL
+          AND m.next_service_date BETWEEN ? AND ?
+        ORDER BY m.next_service_date ASC
+    ''', (user_id, today, future_date)).fetchall()
+
+    overdue = db.execute('''
+        SELECT m.*, v.brand, v.model, v.plate, 'overdue' as reminder_type
+        FROM maintenances m JOIN vehicles v ON m.vehicle_id = v.id
+        WHERE v.user_id = ?
+          AND ((m.next_service_date IS NOT NULL AND m.next_service_date < ?)
+           OR (m.next_service_km IS NOT NULL AND m.next_service_km < v.current_km))
+        ORDER BY m.next_service_date ASC
+    ''', (user_id, today)).fetchall()
+
+    return {'date': date_reminders, 'overdue': overdue}
