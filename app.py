@@ -4,7 +4,7 @@ from flask import Flask, g, session, flash, redirect, url_for, render_template, 
 from services import (
     register_user, login_user, get_vehicles_by_user, add_vehicle,
     get_vehicle, get_maintenances, get_faults, get_total_cost_by_vehicle,
-    update_vehicle_km
+    update_vehicle_km, add_maintenance  # add_maintenance buraya eklendi
 )
 
 app = Flask(__name__)
@@ -108,7 +108,6 @@ def logout():
     flash('You have been successfully logged out.', 'info')
     return redirect(url_for('index'))
 
-# Güncellenen rota
 @app.route('/vehicles')
 @login_required
 def vehicles():
@@ -155,6 +154,36 @@ def vehicle_detail(vehicle_id):
                            maintenances=get_maintenances(db, vehicle_id),
                            faults=get_faults(db, vehicle_id),
                            total_cost=get_total_cost_by_vehicle(db, vehicle_id))
+
+# Yeni eklenen ve İngilizceye uyarlanan rota
+@app.route('/vehicles/<int:vehicle_id>/maintenance/add', methods=['GET', 'POST'])
+@login_required
+def add_maintenance_route(vehicle_id):
+    db = get_db()
+    vehicle = get_vehicle(db, vehicle_id, session['user_id'])
+    if not vehicle:
+        flash('Vehicle not found.', 'danger')
+        return redirect(url_for('vehicles'))
+
+    if request.method == 'POST':
+        data = {
+            'vehicle_id': vehicle_id,
+            'maintenance_type': request.form['maintenance_type'].strip(),
+            'date': request.form['date'],
+            'km_at_service': request.form['km_at_service'],
+            'next_service_km': request.form.get('next_service_km') or None,
+            'next_service_date': request.form.get('next_service_date') or None,
+            'cost': request.form.get('cost') or 0,
+            'service_provider': request.form.get('service_provider', '').strip(),
+            'notes': request.form.get('notes', '').strip(),
+        }
+        result = add_maintenance(db, data)
+        if result['success']:
+            flash('Maintenance log added successfully.', 'success')
+            return redirect(url_for('vehicle_detail', vehicle_id=vehicle_id))
+        flash(result['error'], 'danger')
+
+    return render_template('maintenance_form.html', vehicle=vehicle, maintenance=None, action='add')
 
 @app.route('/vehicles/<int:vehicle_id>/update-km', methods=['POST'])
 @login_required

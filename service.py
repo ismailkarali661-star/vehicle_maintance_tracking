@@ -132,3 +132,27 @@ def update_vehicle_km(db, vehicle_id, user_id, new_km):
                (int(float(new_km)), vehicle_id, user_id))
     db.commit()
     return {'success': True}
+
+# Yeni eklenen ve tamamen İngilizceye çevrilen fonksiyon
+def add_maintenance(db, data):
+    if not data['maintenance_type']:
+        return {'success': False, 'error': 'Maintenance type is required.'}
+    if not data['date']:
+        return {'success': False, 'error': 'Date is required.'}
+    if not is_positive_number(data['km_at_service']):
+        return {'success': False, 'error': 'Invalid mileage value.'}
+
+    db.execute('''INSERT INTO maintenances
+                  (vehicle_id, maintenance_type, date, km_at_service,
+                   next_service_km, next_service_date, cost, service_provider, notes)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+               (data['vehicle_id'], data['maintenance_type'], data['date'],
+                data['km_at_service'], data['next_service_km'], data['next_service_date'],
+                data['cost'], data['service_provider'], data['notes']))
+
+    # İpucu: Bakım yapıldığında aracın kilometresini de otomatik olarak bu km'ye çekelim
+    db.execute('UPDATE vehicles SET current_km = ? WHERE id = ?',
+               (int(float(data['km_at_service'])), data['vehicle_id']))
+
+    db.commit()
+    return {'success': True}
