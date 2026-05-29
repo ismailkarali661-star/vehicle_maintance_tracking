@@ -1,11 +1,12 @@
-import os  # os.path kontrolü için eklendi
+import os
 import sqlite3
 from functools import wraps
 from flask import Flask, g, session, flash, redirect, url_for, render_template, request
 from services import (
     register_user, login_user, get_vehicles_by_user, add_vehicle,
     get_vehicle, get_maintenances, get_faults, get_total_cost_by_vehicle,
-    update_vehicle_km, add_maintenance, search_maintenances
+    update_vehicle_km, add_maintenance, search_maintenances,
+    get_fault, update_fault, delete_fault  # İleride kullanılmak üzere eklendi
 )
 
 app = Flask(__name__)
@@ -70,7 +71,6 @@ def _open_fault_counts(db, user_id):
         GROUP BY f.vehicle_id''', (user_id,)).fetchall()
     return {r['vehicle_id']: r['cnt'] for r in rows}
 
-# Yeni eklenen db migration fonksiyonu
 def _migrate_db(db):
     vcols = {r[1] for r in db.execute('PRAGMA table_info(vehicles)').fetchall()}
     if 'motor' not in vcols:
@@ -79,7 +79,6 @@ def _migrate_db(db):
 
     fcols = {r[1] for r in db.execute('PRAGMA table_info(faults)').fetchall()}
     if 'category' not in fcols:
-        # Dil bütünlüğü için "diger" yerine "other" yapıldı
         db.execute('ALTER TABLE faults ADD COLUMN category TEXT DEFAULT "other"')
         db.commit()
     if 'km_at_fault' not in fcols:
@@ -221,6 +220,22 @@ def search_maintenance_route():
                            results=results, query=query, vehicles=vehicles,
                            selected_vehicle=vehicle_id)
 
+# Yeni eklenen ve İngilizceye uyarlanan arıza çözme rotası
+@app.route('/vehicles/<int:vehicle_id>/faults/<int:fault_id>/resolve', methods=['POST'])
+@login_required
+def resolve_fault_route(vehicle_id, fault_id):
+    db = get_db()
+    if not get_vehicle(db, vehicle_id, session['user_id']):
+        flash('Vehicle not found.', 'danger')
+        return redirect(url_for('vehicles'))
+
+    from datetime import date as _date
+    db.execute("UPDATE faults SET status='resolved', resolved_date=? WHERE id=? AND vehicle_id=?",
+               (_date.today().isoformat(), fault_id, vehicle_id))
+    db.commit()
+    flash('Fault marked as resolved.', 'success')
+    return redirect(url_for('vehicle_detail', vehicle_id=vehicle_id))
+
 @app.route('/vehicles/<int:vehicle_id>/update-km', methods=['POST'])
 @login_required
 def update_vehicle_km_route(vehicle_id):
@@ -230,7 +245,6 @@ def update_vehicle_km_route(vehicle_id):
           'success' if result['success'] else 'danger')
     return redirect(request.referrer or url_for('vehicles'))
 
-# Güncellenmiş __main__ bloğu
 if __name__ == '__main__':
     with app.app_context():
         if not os.path.exists(DATABASE):

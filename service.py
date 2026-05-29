@@ -240,7 +240,7 @@ def add_fault(db, data):
     db.commit()
     return {'success': True}
 
-# --- Yeni Eklenen Arıza Fonksiyonları ---
+
 
 def get_fault(db, fault_id, vehicle_id):
     return db.execute('SELECT * FROM faults WHERE id = ? AND vehicle_id = ?',

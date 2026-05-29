@@ -1,0 +1,5 @@
+{% if fault.status == 'open' %}
+<form method="POST" action="{{ url_for('resolve_fault_route', vehicle_id=vehicle.id, fault_id=fault.id) }}" class="d-inline">
+    <button type="submit" class="btn btn-sm btn-success">✓ Çözüldü</button>
+</form>
+{% endif %}
