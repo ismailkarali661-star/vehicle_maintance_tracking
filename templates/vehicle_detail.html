@@ -3,3 +3,12 @@
     <button type="submit" class="btn btn-sm btn-success">✓ Çözüldü</button>
 </form>
 {% endif %}
+{% set severity_colors = {'critical': 'danger', 'high': 'warning', 'medium': 'info', 'low': 'secondary'} %}
+{% set severity_labels = {'critical': 'Kritik', 'high': 'Yüksek', 'medium': 'Orta', 'low': 'Düşük'} %}
+
+<span class="badge bg-{{ severity_colors.get(fault.severity, 'secondary') }}">
+  {{ severity_labels.get(fault.severity, fault.severity) }}
+</span>
+<span class="badge bg-{{ 'danger' if fault.status == 'open' else 'success' }}">
+  {{ 'Açık' if fault.status == 'open' else 'Çözüldü' }}
+</span>
