@@ -222,7 +222,6 @@ def get_reminders(db, user_id):
 
     return {'date': date_reminders, 'overdue': overdue}
 
-
 def add_fault(db, data):
     if not data['title']:
         return {'success': False, 'error': 'Title is required.'}
@@ -238,5 +237,35 @@ def add_fault(db, data):
                 data['date_reported'], data['severity'],
                 data.get('status', 'open'), data.get('repair_cost', 0),
                 data.get('resolved_date')))
+    db.commit()
+    return {'success': True}
+
+# --- Yeni Eklenen Arıza Fonksiyonları ---
+
+def get_fault(db, fault_id, vehicle_id):
+    return db.execute('SELECT * FROM faults WHERE id = ? AND vehicle_id = ?',
+                      (fault_id, vehicle_id)).fetchone()
+
+def update_fault(db, fault_id, vehicle_id, data):
+    if not data['title']:
+        return {'success': False, 'error': 'Title is required.'}
+    if not data['date_reported']:
+        return {'success': False, 'error': 'Date reported is required.'}
+
+    db.execute('''UPDATE faults SET title=?, description=?, category=?, km_at_fault=?,
+                  date_reported=?, severity=?, status=?, repair_cost=?, resolved_date=?
+                  WHERE id=? AND vehicle_id=?''',
+               (data['title'], data['description'], data.get('category', 'other'),
+                data.get('km_at_fault'), data['date_reported'], data['severity'],
+                data.get('status', 'open'), data.get('repair_cost', 0),
+                data.get('resolved_date'), fault_id, vehicle_id))
+    db.commit()
+    return {'success': True}
+
+def delete_fault(db, fault_id, vehicle_id):
+    if not get_fault(db, fault_id, vehicle_id):
+        return {'success': False, 'error': 'Fault record not found.'}
+
+    db.execute('DELETE FROM faults WHERE id = ? AND vehicle_id = ?', (fault_id, vehicle_id))
     db.commit()
     return {'success': True}
