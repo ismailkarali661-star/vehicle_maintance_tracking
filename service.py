@@ -133,7 +133,6 @@ def update_vehicle_km(db, vehicle_id, user_id, new_km):
     db.commit()
     return {'success': True}
 
-# Yeni eklenen ve tamamen İngilizceye çevrilen fonksiyon
 def add_maintenance(db, data):
     if not data['maintenance_type']:
         return {'success': False, 'error': 'Maintenance type is required.'}
@@ -150,9 +149,40 @@ def add_maintenance(db, data):
                 data['km_at_service'], data['next_service_km'], data['next_service_date'],
                 data['cost'], data['service_provider'], data['notes']))
 
-    # İpucu: Bakım yapıldığında aracın kilometresini de otomatik olarak bu km'ye çekelim
     db.execute('UPDATE vehicles SET current_km = ? WHERE id = ?',
                (int(float(data['km_at_service'])), data['vehicle_id']))
 
+    db.commit()
+    return {'success': True}
+
+# --- Yeni Eklenen Fonksiyonlar (Tamamen İngilizce) ---
+
+def get_maintenance(db, maintenance_id, vehicle_id):
+    return db.execute('SELECT * FROM maintenances WHERE id = ? AND vehicle_id = ?',
+                      (maintenance_id, vehicle_id)).fetchone()
+
+def update_maintenance(db, maintenance_id, vehicle_id, data):
+    if not data['maintenance_type']:
+        return {'success': False, 'error': 'Maintenance type is required.'}
+    if not data['date']:
+        return {'success': False, 'error': 'Date is required.'}
+    if not is_positive_number(data['km_at_service']):
+        return {'success': False, 'error': 'Invalid mileage value.'}
+
+    db.execute('''UPDATE maintenances SET maintenance_type=?, date=?, km_at_service=?,
+                  next_service_km=?, next_service_date=?, cost=?, service_provider=?, notes=?
+                  WHERE id=? AND vehicle_id=?''',
+               (data['maintenance_type'], data['date'], data['km_at_service'],
+                data['next_service_km'], data['next_service_date'], data['cost'],
+                data['service_provider'], data['notes'], maintenance_id, vehicle_id))
+    db.commit()
+    return {'success': True}
+
+def delete_maintenance(db, maintenance_id, vehicle_id):
+    if not get_maintenance(db, maintenance_id, vehicle_id):
+        return {'success': False, 'error': 'Maintenance record not found.'}
+
+    db.execute('DELETE FROM maintenances WHERE id = ? AND vehicle_id = ?',
+               (maintenance_id, vehicle_id))
     db.commit()
     return {'success': True}
