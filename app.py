@@ -1,11 +1,11 @@
+import os  # os.path kontrolü için eklendi
 import sqlite3
 from functools import wraps
 from flask import Flask, g, session, flash, redirect, url_for, render_template, request
 from services import (
     register_user, login_user, get_vehicles_by_user, add_vehicle,
     get_vehicle, get_maintenances, get_faults, get_total_cost_by_vehicle,
-    update_vehicle_km, add_maintenance,
-    search_maintenances  # search_maintenances buraya dahil edildi
+    update_vehicle_km, add_maintenance, search_maintenances
 )
 
 app = Flask(__name__)
@@ -69,6 +69,30 @@ def _open_fault_counts(db, user_id):
         WHERE f.status = 'open' AND v.user_id = ?
         GROUP BY f.vehicle_id''', (user_id,)).fetchall()
     return {r['vehicle_id']: r['cnt'] for r in rows}
+
+# Yeni eklenen db migration fonksiyonu
+def _migrate_db(db):
+    vcols = {r[1] for r in db.execute('PRAGMA table_info(vehicles)').fetchall()}
+    if 'motor' not in vcols:
+        db.execute('ALTER TABLE vehicles ADD COLUMN motor TEXT')
+        db.commit()
+
+    fcols = {r[1] for r in db.execute('PRAGMA table_info(faults)').fetchall()}
+    if 'category' not in fcols:
+        # Dil bütünlüğü için "diger" yerine "other" yapıldı
+        db.execute('ALTER TABLE faults ADD COLUMN category TEXT DEFAULT "other"')
+        db.commit()
+    if 'km_at_fault' not in fcols:
+        db.execute('ALTER TABLE faults ADD COLUMN km_at_fault INTEGER')
+        db.commit()
+
+    tables = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
+    if 'engine_variants' not in tables:
+        db.execute('''CREATE TABLE IF NOT EXISTS engine_variants (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            brand TEXT NOT NULL, model TEXT NOT NULL,
+            engine TEXT NOT NULL, fuel_type TEXT NOT NULL)''')
+        db.commit()
 
 @app.route('/')
 def index():
@@ -206,5 +230,13 @@ def update_vehicle_km_route(vehicle_id):
           'success' if result['success'] else 'danger')
     return redirect(request.referrer or url_for('vehicles'))
 
+# Güncellenmiş __main__ bloğu
 if __name__ == '__main__':
+    with app.app_context():
+        if not os.path.exists(DATABASE):
+            init_db()
+        else:
+            _migrate_db(get_db())
+    from seed_knowledge import seed
+    seed()
     app.run(debug=True)
