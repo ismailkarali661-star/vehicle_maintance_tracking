@@ -268,8 +268,6 @@ def delete_fault(db, fault_id, vehicle_id):
     db.commit()
     return {'success': True}
 
-# --- Yeni Eklenen Bakım Danışmanı Analiz Fonksiyonları ---
-
 def _match_keywords(maintenance_type_text, keywords_csv):
     text = maintenance_type_text.lower()
     for kw in keywords_csv.split(','):
@@ -307,7 +305,6 @@ def get_maintenance_advisor_analysis(db, vehicle_id):
         next_km = ((last_km or 0) + interval_km) if interval_km else None
         km_remaining = (next_km - current_km) if next_km is not None else None
 
-       
         item = {
             'maintenance_type': tmpl['maintenance_type'],
             'priority': tmpl['priority'],
@@ -342,3 +339,16 @@ def get_maintenance_advisor_analysis(db, vehicle_id):
         'urgent_cost_min': sum(i['cost_min'] or 0 for i in urgent),
         'urgent_cost_max': sum(i['cost_max'] or 0 for i in urgent),
     }
+
+
+def _engine_category(motor):
+    if not motor:
+        return 'medium'
+    s = motor.lower().replace(' ', '')
+    large = ['v6', 'v8', 'v10', 'v12', '2.5', '2.7', '2.8', '3.0', '3.5', '4.0', '5.0']
+    small = ['1.0', '1.1', '1.2', '1.3', '1.4', '900cc']
+    if any(m in s for m in large):
+        return 'large'
+    if any(m in s for m in small):
+        return 'small'
+    return 'medium'
