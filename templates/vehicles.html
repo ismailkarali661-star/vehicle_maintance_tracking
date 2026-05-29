@@ -1,0 +1,3 @@
+{% if open_faults.get(vehicle.id) %}
+<span class="badge bg-danger">{{ open_faults[vehicle.id] }} arıza</span>
+{% endif %}

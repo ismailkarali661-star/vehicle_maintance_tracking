@@ -61,6 +61,14 @@ def _catalog_data(db):
         engines[b][m].append({'engine': e, 'fuel_type': ft})
     return brands, models, engines
 
+def _open_fault_counts(db, user_id):
+    rows = db.execute('''
+        SELECT f.vehicle_id, COUNT(*) as cnt FROM faults f
+        JOIN vehicles v ON f.vehicle_id = v.id
+        WHERE f.status = 'open' AND v.user_id = ?
+        GROUP BY f.vehicle_id''', (user_id,)).fetchall()
+    return {r['vehicle_id']: r['cnt'] for r in rows}
+
 @app.route('/')
 def index():
     if 'user_id' in session:
@@ -100,12 +108,14 @@ def logout():
     flash('You have been successfully logged out.', 'info')
     return redirect(url_for('index'))
 
+# Güncellenen rota
 @app.route('/vehicles')
 @login_required
 def vehicles():
     db = get_db()
     vehicle_list = get_vehicles_by_user(db, session['user_id'])
-    return render_template('vehicles.html', vehicles=vehicle_list)
+    open_faults = _open_fault_counts(db, session['user_id'])
+    return render_template('vehicles.html', vehicles=vehicle_list, open_faults=open_faults)
 
 @app.route('/vehicles/add', methods=['GET', 'POST'])
 @login_required
