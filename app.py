@@ -1,5 +1,6 @@
 import os
 import sqlite3
+import json as _json  # JSON string'lerini listeye çevirmek için eklendi
 from functools import wraps
 from flask import Flask, g, session, flash, redirect, url_for, render_template, request
 from services import (
@@ -176,7 +177,7 @@ def vehicle_detail(vehicle_id):
         return redirect(url_for('vehicles'))
     return render_template('vehicle_detail.html',
                            vehicle=vehicle,
-                           maintenances=get_mainmenances(db, vehicle_id),
+                           maintenances=get_maintenances(db, vehicle_id),
                            faults=get_faults(db, vehicle_id),
                            total_cost=get_total_cost_by_vehicle(db, vehicle_id))
 
@@ -236,7 +237,7 @@ def resolve_fault_route(vehicle_id, fault_id):
     flash('Fault marked as resolved.', 'success')
     return redirect(url_for('vehicle_detail', vehicle_id=vehicle_id))
 
-# Güncellenmiş Danışman (Advisor) Rotası
+
 @app.route('/vehicles/<int:vehicle_id>/advisor')
 @login_required
 def vehicle_advisor(vehicle_id):
@@ -248,7 +249,18 @@ def vehicle_advisor(vehicle_id):
 
     analysis = get_maintenance_advisor_analysis(db, vehicle_id)
 
-    # Yeni Eklenen Dinamik Bakım Takvimi Döngüsü (Tamamen İngilizce)
+
+    guide_note = None
+    gn_row = db.execute(
+        'SELECT * FROM purchase_guide_notes WHERE brand=? AND model=? LIMIT 1',
+        (vehicle['brand'], vehicle['model'])
+    ).fetchone()
+
+    if gn_row:
+        guide_note = dict(gn_row)
+        guide_note['pros'] = _json.loads(guide_note['pros'] or '[]')
+        guide_note['cons'] = _json.loads(guide_note['cons'] or '[]')
+
     standard_items = ["Engine Oil Change", "Oil Filter Replacement", "Air Filter Inspection", "Cabin Filter Replacement"]
     maintenance_schedule = []
 
@@ -261,11 +273,14 @@ def vehicle_advisor(vehicle_id):
         if km % 90000 == 0:
             items.append("Timing Belt Replacement")
 
-        # Km gösterimi nokta formatına uyarlandı (Örn: 15.000)
         formatted_km = f"{km:,}".replace(",", ".")
         maintenance_schedule.append({'km': formatted_km, 'maintenance_list': items})
 
-    return render_template('advisor.html', vehicle=vehicle, analysis=analysis, schedule=maintenance_schedule)
+    return render_template('advisor.html',
+                           vehicle=vehicle,
+                           analysis=analysis,
+                           schedule=maintenance_schedule,
+                           guide_note=guide_note) # Şablona yeni veri gönderildi
 
 @app.route('/vehicles/<int:vehicle_id>/update-km', methods=['POST'])
 @login_required
