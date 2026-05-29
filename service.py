@@ -240,8 +240,6 @@ def add_fault(db, data):
     db.commit()
     return {'success': True}
 
-
-
 def get_fault(db, fault_id, vehicle_id):
     return db.execute('SELECT * FROM faults WHERE id = ? AND vehicle_id = ?',
                       (fault_id, vehicle_id)).fetchone()
@@ -269,3 +267,78 @@ def delete_fault(db, fault_id, vehicle_id):
     db.execute('DELETE FROM faults WHERE id = ? AND vehicle_id = ?', (fault_id, vehicle_id))
     db.commit()
     return {'success': True}
+
+# --- Yeni Eklenen Bakım Danışmanı Analiz Fonksiyonları ---
+
+def _match_keywords(maintenance_type_text, keywords_csv):
+    text = maintenance_type_text.lower()
+    for kw in keywords_csv.split(','):
+        if kw.strip().lower() in text:
+            return True
+    return False
+
+def get_maintenance_advisor_analysis(db, vehicle_id):
+    vehicle = db.execute('SELECT * FROM vehicles WHERE id=?', (vehicle_id,)).fetchone()
+    if not vehicle:
+        return None
+
+    current_km = vehicle['current_km']
+    fuel_type = vehicle['fuel_type']
+
+    history = db.execute(
+        'SELECT * FROM maintenances WHERE vehicle_id=? ORDER BY km_at_service DESC',
+        (vehicle_id,)
+    ).fetchall()
+
+    templates = db.execute(
+        'SELECT * FROM maintenance_templates WHERE fuel_type IS NULL OR fuel_type=?',
+        (fuel_type,)
+    ).fetchall()
+
+    overdue, due, upcoming, good = [], [], [], []
+
+    for tmpl in templates:
+        last_entry = next(
+            (h for h in history if _match_keywords(h['maintenance_type'], tmpl['keywords'])),
+            None
+        )
+        last_km = last_entry['km_at_service'] if last_entry else None
+        interval_km = tmpl['interval_km']
+        next_km = ((last_km or 0) + interval_km) if interval_km else None
+        km_remaining = (next_km - current_km) if next_km is not None else None
+
+       
+        item = {
+            'maintenance_type': tmpl['maintenance_type'],
+            'priority': tmpl['priority'],
+            'interval_km': interval_km,
+            'last_km': last_km,
+            'last_date': last_entry['date'] if last_entry else None,
+            'next_km': next_km,
+            'km_remaining': km_remaining,
+            'cost_min': tmpl['cost_min_tl'] if 'cost_min_tl' in tmpl.keys() else tmpl.get('cost_min', 0),
+            'cost_max': tmpl['cost_max_tl'] if 'cost_max_tl' in tmpl.keys() else tmpl.get('cost_max', 0),
+            'notes': tmpl['notes'],
+        }
+
+        if km_remaining is None:
+            good.append(item)
+        elif km_remaining <= 0:
+            overdue.append(item)
+        elif km_remaining <= 1000:
+            due.append(item)
+        elif km_remaining <= 5000:
+            upcoming.append(item)
+        else:
+            good.append(item)
+
+    urgent = overdue + due
+    return {
+        'vehicle': vehicle,
+        'overdue': overdue,
+        'due': due,
+        'upcoming': upcoming,
+        'good': good,
+        'urgent_cost_min': sum(i['cost_min'] or 0 for i in urgent),
+        'urgent_cost_max': sum(i['cost_max'] or 0 for i in urgent),
+    }
