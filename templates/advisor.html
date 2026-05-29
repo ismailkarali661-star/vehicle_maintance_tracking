@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block content %}
+<h4>🔧 Maintenance Advisor — {{ vehicle.brand }} {{ vehicle.model }}</h4>
+
+{% if analysis.overdue %}
+<div class="alert alert-danger">
+    <h5>⚠️ Overdue Maintenance ({{ analysis.overdue|length }})</h5>
+    <p>Estimated urgent cost: ${{ analysis.urgent_cost_min|int }} – ${{ analysis.urgent_cost_max|int }}</p>
+    {% for item in analysis.overdue %}
+    <div class="card border-danger mb-2">
+        <div class="card-body py-2">
+            <strong>{{ item.maintenance_type }}</strong>
+            <span class="text-danger">— {{ item.km_remaining|int }} km overdue</span>
+            <small class="text-muted d-block">{{ item.notes }}</small>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% for item in analysis.upcoming %}
+<div class="card mb-2">
+    <div class="card-body py-2">
+        <strong>{{ item.maintenance_type }}</strong>
+        <span class="text-warning">— {{ item.km_remaining }} km remaining</span>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

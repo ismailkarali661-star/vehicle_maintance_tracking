@@ -6,7 +6,8 @@ from services import (
     register_user, login_user, get_vehicles_by_user, add_vehicle,
     get_vehicle, get_maintenances, get_faults, get_total_cost_by_vehicle,
     update_vehicle_km, add_maintenance, search_maintenances,
-    get_fault, update_fault, delete_fault  # İleride kullanılmak üzere eklendi
+    get_fault, update_fault, delete_fault,
+    get_maintenance_advisor_analysis  # Advisor analizi için eklendi
 )
 
 app = Flask(__name__)
@@ -220,7 +221,6 @@ def search_maintenance_route():
                            results=results, query=query, vehicles=vehicles,
                            selected_vehicle=vehicle_id)
 
-# Yeni eklenen ve İngilizceye uyarlanan arıza çözme rotası
 @app.route('/vehicles/<int:vehicle_id>/faults/<int:fault_id>/resolve', methods=['POST'])
 @login_required
 def resolve_fault_route(vehicle_id, fault_id):
@@ -235,6 +235,18 @@ def resolve_fault_route(vehicle_id, fault_id):
     db.commit()
     flash('Fault marked as resolved.', 'success')
     return redirect(url_for('vehicle_detail', vehicle_id=vehicle_id))
+
+# Yeni eklenen ve İngilizceye uyarlanan Danışman (Advisor) rotası
+@app.route('/vehicles/<int:vehicle_id>/advisor')
+@login_required
+def vehicle_advisor(vehicle_id):
+    db = get_db()
+    vehicle = get_vehicle(db, vehicle_id, session['user_id'])
+    if not vehicle:
+        flash('Vehicle not found.', 'danger')
+        return redirect(url_for('vehicles'))
+    analysis = get_maintenance_advisor_analysis(db, vehicle_id)
+    return render_template('advisor.html', vehicle=vehicle, analysis=analysis)
 
 @app.route('/vehicles/<int:vehicle_id>/update-km', methods=['POST'])
 @login_required
