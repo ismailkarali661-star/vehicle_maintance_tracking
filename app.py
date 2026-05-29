@@ -7,7 +7,7 @@ from services import (
     get_vehicle, get_maintenances, get_faults, get_total_cost_by_vehicle,
     update_vehicle_km, add_maintenance, search_maintenances,
     get_fault, update_fault, delete_fault,
-    get_maintenance_advisor_analysis  # Advisor analizi için eklendi
+    get_maintenance_advisor_analysis
 )
 
 app = Flask(__name__)
@@ -176,7 +176,7 @@ def vehicle_detail(vehicle_id):
         return redirect(url_for('vehicles'))
     return render_template('vehicle_detail.html',
                            vehicle=vehicle,
-                           maintenances=get_maintenances(db, vehicle_id),
+                           maintenances=get_mainmenances(db, vehicle_id),
                            faults=get_faults(db, vehicle_id),
                            total_cost=get_total_cost_by_vehicle(db, vehicle_id))
 
@@ -236,7 +236,7 @@ def resolve_fault_route(vehicle_id, fault_id):
     flash('Fault marked as resolved.', 'success')
     return redirect(url_for('vehicle_detail', vehicle_id=vehicle_id))
 
-# Yeni eklenen ve İngilizceye uyarlanan Danışman (Advisor) rotası
+# Güncellenmiş Danışman (Advisor) Rotası
 @app.route('/vehicles/<int:vehicle_id>/advisor')
 @login_required
 def vehicle_advisor(vehicle_id):
@@ -245,8 +245,27 @@ def vehicle_advisor(vehicle_id):
     if not vehicle:
         flash('Vehicle not found.', 'danger')
         return redirect(url_for('vehicles'))
+
     analysis = get_maintenance_advisor_analysis(db, vehicle_id)
-    return render_template('advisor.html', vehicle=vehicle, analysis=analysis)
+
+    # Yeni Eklenen Dinamik Bakım Takvimi Döngüsü (Tamamen İngilizce)
+    standard_items = ["Engine Oil Change", "Oil Filter Replacement", "Air Filter Inspection", "Cabin Filter Replacement"]
+    maintenance_schedule = []
+
+    for km in range(15000, 200001, 15000):
+        items = list(standard_items)
+        if km % 30000 == 0:
+            items.append("Front Brake Pads Inspection")
+        if km % 60000 == 0 and vehicle['fuel_type'].lower() in ['benzin', 'gasoline']:
+            items.append("Spark Plugs Replacement")
+        if km % 90000 == 0:
+            items.append("Timing Belt Replacement")
+
+        # Km gösterimi nokta formatına uyarlandı (Örn: 15.000)
+        formatted_km = f"{km:,}".replace(",", ".")
+        maintenance_schedule.append({'km': formatted_km, 'maintenance_list': items})
+
+    return render_template('advisor.html', vehicle=vehicle, analysis=analysis, schedule=maintenance_schedule)
 
 @app.route('/vehicles/<int:vehicle_id>/update-km', methods=['POST'])
 @login_required
