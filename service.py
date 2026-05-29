@@ -155,8 +155,6 @@ def add_maintenance(db, data):
     db.commit()
     return {'success': True}
 
-# --- Yeni Eklenen Fonksiyonlar (Tamamen İngilizce) ---
-
 def get_maintenance(db, maintenance_id, vehicle_id):
     return db.execute('SELECT * FROM maintenances WHERE id = ? AND vehicle_id = ?',
                       (maintenance_id, vehicle_id)).fetchone()
@@ -186,3 +184,18 @@ def delete_maintenance(db, maintenance_id, vehicle_id):
                (maintenance_id, vehicle_id))
     db.commit()
     return {'success': True}
+
+
+def search_maintenances(db, user_id, query, vehicle_id=None):
+    params = [user_id]
+    sql = '''SELECT m.*, v.brand, v.model, v.plate
+             FROM maintenances m JOIN vehicles v ON m.vehicle_id = v.id
+             WHERE v.user_id = ?'''
+    if query:
+        sql += ' AND (m.maintenance_type LIKE ? OR m.notes LIKE ?)'
+        params += [f'%{query}%', f'%{query}%']
+    if vehicle_id:
+        sql += ' AND m.vehicle_id = ?'
+        params.append(vehicle_id)
+    sql += ' ORDER BY m.date DESC'
+    return db.execute(sql, params).fetchall()

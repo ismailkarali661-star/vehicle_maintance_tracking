@@ -4,7 +4,8 @@ from flask import Flask, g, session, flash, redirect, url_for, render_template, 
 from services import (
     register_user, login_user, get_vehicles_by_user, add_vehicle,
     get_vehicle, get_maintenances, get_faults, get_total_cost_by_vehicle,
-    update_vehicle_km, add_maintenance  # add_maintenance buraya eklendi
+    update_vehicle_km, add_maintenance,
+    search_maintenances  # search_maintenances buraya dahil edildi
 )
 
 app = Flask(__name__)
@@ -155,7 +156,6 @@ def vehicle_detail(vehicle_id):
                            faults=get_faults(db, vehicle_id),
                            total_cost=get_total_cost_by_vehicle(db, vehicle_id))
 
-# Yeni eklenen ve İngilizceye uyarlanan rota
 @app.route('/vehicles/<int:vehicle_id>/maintenance/add', methods=['GET', 'POST'])
 @login_required
 def add_maintenance_route(vehicle_id):
@@ -184,6 +184,18 @@ def add_maintenance_route(vehicle_id):
         flash(result['error'], 'danger')
 
     return render_template('maintenance_form.html', vehicle=vehicle, maintenance=None, action='add')
+
+@app.route('/maintenance/search')
+@login_required
+def search_maintenance_route():
+    db = get_db()
+    query = request.args.get('q', '').strip()
+    vehicle_id = request.args.get('vehicle_id')
+    results = search_maintenances(db, session['user_id'], query, vehicle_id)
+    vehicles = get_vehicles_by_user(db, session['user_id'])
+    return render_template('maintenance_search.html',
+                           results=results, query=query, vehicles=vehicles,
+                           selected_vehicle=vehicle_id)
 
 @app.route('/vehicles/<int:vehicle_id>/update-km', methods=['POST'])
 @login_required
