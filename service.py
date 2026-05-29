@@ -1,4 +1,4 @@
-impimport hashlib
+import hashlib
 import re
 from datetime import date, timedelta
 
@@ -221,3 +221,22 @@ def get_reminders(db, user_id):
     ''', (user_id, today)).fetchall()
 
     return {'date': date_reminders, 'overdue': overdue}
+
+
+def add_fault(db, data):
+    if not data['title']:
+        return {'success': False, 'error': 'Title is required.'}
+    if not data['date_reported']:
+        return {'success': False, 'error': 'Date reported is required.'}
+
+    db.execute('''INSERT INTO faults
+                  (vehicle_id, title, description, category, km_at_fault,
+                   date_reported, severity, status, repair_cost, resolved_date)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+               (data['vehicle_id'], data['title'], data['description'],
+                data.get('category', 'other'), data.get('km_at_fault'),
+                data['date_reported'], data['severity'],
+                data.get('status', 'open'), data.get('repair_cost', 0),
+                data.get('resolved_date')))
+    db.commit()
+    return {'success': True}
