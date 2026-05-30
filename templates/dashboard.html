@@ -1,61 +1,119 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+{% block title %}Dashboard – AutoTrack{% endblock %}
 {% block content %}
-<h4>Dashboard</h4>
+<div class="page-header">
+    <div>
+        <div class="page-title">Dashboard</div>
+        <div class="page-subtitle">Welcome back, {{ session.username }}</div>
+    </div>
+    <a href="{{ url_for('add_vehicle_route') }}" class="btn btn-primary">+ Add Vehicle</a>
+</div>
 
-
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card text-center">
-            <div class="card-body">
-                <h2>{{ vehicles|length }}</h2>
-                <p class="text-muted mb-0">Araç</p>
-            </div>
-        </div>
+<div class="grid-4" style="margin-bottom:2rem;">
+    <div class="stat-card">
+        <div class="stat-label">Total Vehicles</div>
+        <div class="stat-value">{{ vehicles|length }}</div>
     </div>
-    <div class="col-md-3">
-        <div class="card text-center border-danger">
-            <div class="card-body">
-                <h2 class="text-danger">{{ all_overdue|length }}</h2>
-                <p class="text-muted mb-0">Gecikmiş Bakım</p>
-            </div>
-        </div>
+    <div class="stat-card">
+        <div class="stat-label">Due Soon</div>
+        <div class="stat-value" style="color:var(--warning);">{{ all_due|length }}</div>
     </div>
-    <div class="col-md-3">
-        <div class="card text-center border-warning">
-            <div class="card-body">
-                <h2 class="text-warning">{{ all_due|length }}</h2>
-                <p class="text-muted mb-0">Yaklaşan Bakım</p>
-            </div>
-        </div>
+    <div class="stat-card">
+        <div class="stat-label">Overdue Service</div>
+        <div class="stat-value" style="color:var(--danger);">{{ all_overdue|length }}</div>
     </div>
-    <div class="col-md-3">
-        <div class="card text-center">
-            <div class="card-body">
-                <h2>{{ costs.values()|sum|int }} ₺</h2>
-                <p class="text-muted mb-0">Toplam Harcama</p>
-            </div>
+    <div class="stat-card">
+        <div class="stat-label">Total Expenses</div>
+        <div class="stat-value" style="color:var(--accent2);">
+            {% set total = costs.values()|sum %}
+            ${{ "%.0f"|format(total) }}
         </div>
     </div>
 </div>
 
+{% if all_overdue %}
+<div class="card" style="margin-bottom:1.5rem;border-color:rgba(239,68,68,0.4);">
+    <div class="card-header">
+        <span class="card-title" style="color:var(--danger);">⛔ Overdue Maintenance ({{ all_overdue|length }})</span>
+    </div>
+    {% for r in all_overdue %}
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0;border-bottom:1px solid var(--border);">
+        <div>
+            <a href="{{ url_for('vehicle_detail', vehicle_id=r.vehicle.id) }}" style="font-weight:600;color:var(--text);">{{ r.vehicle.brand }} {{ r.vehicle.model }}</a>
+            <span style="color:var(--text-muted);font-size:0.85rem;"> — {{ r.maintenance_type }}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+            {% if r.km_remaining %}<span style="font-size:0.8rem;color:var(--danger);">{{ r.km_remaining|abs|int }} km overdue</span>{% endif %}
+            <a href="{{ url_for('add_maintenance_route', vehicle_id=r.vehicle.id) }}?type={{ r.maintenance_type | urlencode }}&quick=1" class="btn btn-danger btn-sm" style="white-space:nowrap;">Log Service →</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
 
-{% for v in vehicles %}
-<div class="card mb-3">
-    <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center">
+{% if all_due %}
+<div class="card" style="margin-bottom:1.5rem;border-color:rgba(245,158,11,0.4);">
+    <div class="card-header">
+        <span class="card-title" style="color:var(--warning);">⚠️ Maintenance Due Soon ({{ all_due|length }})</span>
+    </div>
+    {% for r in all_due %}
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0;border-bottom:1px solid var(--border);">
+        <div>
+            <a href="{{ url_for('vehicle_advisor', vehicle_id=r.vehicle.id) }}" style="font-weight:600;color:var(--text);">{{ r.vehicle.brand }} {{ r.vehicle.model }}</a>
+            <span style="color:var(--text-muted);font-size:0.85rem;"> — {{ r.maintenance_type }}</span>
+        </div>
+        <span class="badge badge-warning">{{ r.km_remaining|int }} km remaining</span>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="card-header" style="border:none;padding:0;margin-bottom:1rem;">
+    <span class="card-title">My Vehicles</span>
+</div>
+{% if vehicles %}
+<div class="grid-2">
+    {% for v in vehicles %}
+    <div class="card" style="border-color:var(--border);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;">
             <div>
-                <h5>{{ v.brand }} {{ v.model }} ({{ v.year }})</h5>
-                <small class="text-muted">{{ v.plate }} · {{ v.current_km|int }} km</small>
+                <div style="font-family:'Rajdhani',sans-serif;font-size:1.4rem;font-weight:700;">{{ v.brand }} {{ v.model }}</div>
+                <div style="color:var(--text-muted);font-size:0.85rem;">{{ v.year }} · {{ v.plate }}{% if v.motor %} · <span style="color:var(--text);">{{ v.motor }}</span>{% endif %}</div>
             </div>
-            <div>
-                {% if open_faults.get(v.id) %}
-                <span class="badge bg-danger">{{ open_faults[v.id] }} arıza</span>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.35rem;">
+                <span class="badge badge-muted">{{ v.fuel_type|capitalize }}</span>
+                {% if open_faults.get(v.id, 0) > 0 %}
+                <a href="{{ url_for('vehicle_detail', vehicle_id=v.id) }}" class="badge badge-danger" style="text-decoration:none;">⚠ {{ open_faults[v.id] }} active fault{% if open_faults[v.id] > 1 %}s{% endif %}</a>
                 {% endif %}
-                <a href="{{ url_for('vehicle_detail', vehicle_id=v.id) }}" class="btn btn-sm btn-outline-primary">Detay</a>
-                <a href="{{ url_for('vehicle_advisor', vehicle_id=v.id) }}" class="btn btn-sm btn-outline-warning">Danışman</a>
             </div>
         </div>
+        <div style="display:flex;gap:2rem;margin-bottom:1rem;">
+            <div>
+                <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Current Mileage</div>
+                <div style="font-family:'Rajdhani',sans-serif;font-size:1.3rem;font-weight:600;">{{ "{:,.0f}".format(v.current_km) }} km</div>
+            </div>
+            <div>
+                <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Total Costs</div>
+                <div style="font-family:'Rajdhani',sans-serif;font-size:1.3rem;font-weight:600;color:var(--accent2);">${{ "%.0f"|format(costs[v.id]) }}</div>
+            </div>
+        </div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+            <a href="{{ url_for('vehicle_advisor', vehicle_id=v.id) }}" class="btn btn-primary btn-sm">🔧 Analysis</a>
+            <a href="{{ url_for('vehicle_detail', vehicle_id=v.id) }}" class="btn btn-secondary btn-sm">Details</a>
+            <button onclick="openKmModal({{ v.id }}, {{ v.current_km }}, '{{ v.brand }} {{ v.model }}')"
+                    class="btn btn-sm" style="background:rgba(59,130,246,0.15);color:#93c5fd;border:1px solid rgba(59,130,246,0.3);">
+                📍 Update Mileage
+            </button>
+        </div>
     </div>
+    {% endfor %}
 </div>
-{% endfor %}
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">🚗</div>
+    <div class="empty-title">No vehicles added yet</div>
+    <p style="margin:0.5rem 0 1.5rem;">Get started by adding your first vehicle configuration profile.</p>
+    <a href="{{ url_for('add_vehicle_route') }}" class="btn btn-primary">+ Add Vehicle</a>
+</div>
+{% endif %}
 {% endblock %}

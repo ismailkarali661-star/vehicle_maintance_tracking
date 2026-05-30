@@ -1,3 +1,76 @@
-{% if open_faults.get(vehicle.id) %}
-<span class="badge bg-danger">{{ open_faults[vehicle.id] }} arıza</span>
+{% extends "base.html" %}
+{% block title %}My Vehicles – AutoTrack{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">My Vehicles</div>
+        <div class="page-subtitle">{{ vehicles|length }} vehicle(s) registered</div>
+    </div>
+    <a href="{{ url_for('add_vehicle_route') }}" class="btn btn-primary">+ New Vehicle</a>
+</div>
+
+{% if vehicles %}
+<div class="card">
+    <table>
+        <thead>
+        <tr>
+            <th>Vehicle</th>
+            <th>Plate</th>
+            <th>Year</th>
+            <th>Mileage</th>
+            <th>Engine</th>
+            <th>Faults</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for v in vehicles %}
+        <tr>
+            <td>
+                <div style="font-weight:600;">{{ v.brand }} {{ v.model }}</div>
+                {% if v.color %}<div style="font-size:0.78rem;color:var(--text-muted);">{{ v.color }}</div>{% endif %}
+            </td>
+            <td><span class="badge badge-muted" style="font-family:monospace;letter-spacing:1px;">{{ v.plate }}</span></td>
+            <td>{{ v.year }}</td>
+            <td>
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                    <span style="font-family:'Rajdhani',sans-serif;font-weight:600;">{{ "{:,.0f}".format(v.current_km) }}</span>
+                    <button onclick="openKmModal({{ v.id }}, {{ v.current_km }}, '{{ v.brand }} {{ v.model }}')"
+                            class="btn btn-sm" style="padding:0.15rem 0.45rem;font-size:0.7rem;background:rgba(59,130,246,0.15);color:#93c5fd;border:1px solid rgba(59,130,246,0.3);"
+                            title="Update mileage">✎</button>
+                </div>
+            </td>
+            <td style="font-size:0.82rem;color:var(--text-muted);">{{ v.motor or '—' }}</td>
+            <td>
+                {% set fc = open_faults.get(v.id, 0) %}
+                {% if fc > 0 %}
+                <a href="{{ url_for('vehicle_detail', vehicle_id=v.id) }}" class="badge badge-danger" style="text-decoration:none;">⚠ {{ fc }}</a>
+                {% else %}
+                <span style="color:var(--border);">—</span>
+                {% endif %}
+            </td>
+            <td>
+                <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+                    <a href="{{ url_for('vehicle_advisor', vehicle_id=v.id) }}" class="btn btn-primary btn-sm">🔧 Analysis</a>
+                    <a href="{{ url_for('vehicle_detail', vehicle_id=v.id) }}" class="btn btn-secondary btn-sm">Details</a>
+                    <a href="{{ url_for('edit_vehicle_route', vehicle_id=v.id) }}" class="btn btn-warning btn-sm">✏️</a>
+                    <form class="confirm-form" method="POST" action="{{ url_for('delete_vehicle_route', vehicle_id=v.id) }}"
+                          onsubmit="return confirm('Delete {{ v.brand }} {{ v.model }}? All maintenance and fault records will also be deleted!');">
+                        <button type="submit" class="btn btn-danger btn-sm">🗑</button>
+                    </form>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">🚗</div>
+    <div class="empty-title">No vehicles added yet</div>
+    <p style="margin:0.5rem 0 1.5rem;">Get started by adding your first vehicle.</p>
+    <a href="{{ url_for('add_vehicle_route') }}" class="btn btn-primary">+ Add Vehicle</a>
+</div>
 {% endif %}
+{% endblock %}

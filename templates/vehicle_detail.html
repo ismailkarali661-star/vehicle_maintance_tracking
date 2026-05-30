@@ -1,14 +1,169 @@
-{% if fault.status == 'open' %}
-<form method="POST" action="{{ url_for('resolve_fault_route', vehicle_id=vehicle.id, fault_id=fault.id) }}" class="d-inline">
-    <button type="submit" class="btn btn-sm btn-success">✓ Çözüldü</button>
-</form>
-{% endif %}
-{% set severity_colors = {'critical': 'danger', 'high': 'warning', 'medium': 'info', 'low': 'secondary'} %}
-{% set severity_labels = {'critical': 'Kritik', 'high': 'Yüksek', 'medium': 'Orta', 'low': 'Düşük'} %}
+{% extends "base.html" %}
+{% block title %}{{ vehicle.brand }} {{ vehicle.model }} – AutoTrack{% endblock %}
+{% block content %}
+<!-- HEADER -->
+<div class="page-header">
+    <div>
+        <div class="page-title">{{ vehicle.brand }} {{ vehicle.model }}</div>
+        <div class="page-subtitle">{{ vehicle.year }} · {{ vehicle.plate }} · {{ vehicle.fuel_type|capitalize }}{% if vehicle.motor %} · {{ vehicle.motor }}{% endif %}{% if vehicle.color %} · {{ vehicle.color }}{% endif %}</div>
+    </div>
+    <div style="display:flex;gap:0.5rem;">
+        <a href="{{ url_for('vehicle_advisor', vehicle_id=vehicle.id) }}" class="btn btn-primary btn-sm">🔧 Maintenance Analysis</a>
+        <a href="{{ url_for('edit_vehicle_route', vehicle_id=vehicle.id) }}" class="btn btn-warning btn-sm">✏️ Edit</a>
+        <a href="{{ url_for('vehicles') }}" class="btn btn-secondary btn-sm">← Vehicles</a>
+    </div>
+</div>
 
-<span class="badge bg-{{ severity_colors.get(fault.severity, 'secondary') }}">
-  {{ severity_labels.get(fault.severity, fault.severity) }}
-</span>
-<span class="badge bg-{{ 'danger' if fault.status == 'open' else 'success' }}">
-  {{ 'Açık' if fault.status == 'open' else 'Çözüldü' }}
-</span>
+<!-- STATS -->
+<div class="grid-4" style="margin-bottom:2rem;">
+    <div class="stat-card">
+        <div class="stat-label">Current Mileage</div>
+        <div class="stat-value">{{ "{:,.0f}".format(vehicle.current_km) }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Maintenance Records</div>
+        <div class="stat-value">{{ maintenances|length }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Open Faults</div>
+        <div class="stat-value" style="color:{% if faults|selectattr('status','equalto','open')|list|length > 0 %}var(--danger){% else %}var(--success){% endif %};">
+            {{ faults|selectattr('status','equalto','open')|list|length }}
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Total Spending</div>
+        <div class="stat-value" style="color:var(--accent2);">{{ "%.0f"|format(total_cost) }}</div>
+    </div>
+</div>
+
+<!-- MAINTENANCE TABLE -->
+<div class="card" style="margin-bottom:1.5rem;">
+    <div class="card-header">
+        <span class="card-title">🔧 Maintenance History</span>
+        <a href="{{ url_for('add_maintenance_route', vehicle_id=vehicle.id) }}" class="btn btn-primary btn-sm">+ Add Maintenance</a>
+    </div>
+    {% if maintenances %}
+    <table>
+        <thead>
+        <tr>
+            <th>Maintenance Type</th>
+            <th>Date</th>
+            <th>Mileage</th>
+            <th>Next Mileage</th>
+            <th>Next Date</th>
+            <th>Cost</th>
+            <th>Service Provider</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for m in maintenances %}
+        <tr>
+            <td style="font-weight:600;" title="{{ m.notes or '' }}">{{ m.maintenance_type }}{% if m.notes %}<span style="font-size:0.7rem;color:var(--text-muted);margin-left:0.3rem;" title="{{ m.notes }}">📝</span>{% endif %}</td>
+            <td>{{ m.date }}</td>
+            <td>{{ "{:,.0f}".format(m.km_at_service) }}</td>
+            <td>{% if m.next_service_km %}<span class="badge badge-info">{{ "{:,.0f}".format(m.next_service_km) }} km</span>{% else %}—{% endif %}</td>
+            <td>{% if m.next_service_date %}<span class="badge badge-info">{{ m.next_service_date }}</span>{% else %}—{% endif %}</td>
+            <td>{% if m.cost %}{{ "%.0f"|format(m.cost) }}{% else %}—{% endif %}</td>
+            <td style="color:var(--text-muted);">{{ m.service_provider or '—' }}</td>
+            <td>
+                <div style="display:flex;gap:0.3rem;">
+                    <a href="{{ url_for('edit_maintenance_route', vehicle_id=vehicle.id, maintenance_id=m.id) }}" class="btn btn-warning btn-sm">✏️</a>
+                    <form class="confirm-form" method="POST" action="{{ url_for('delete_maintenance_route', vehicle_id=vehicle.id, maintenance_id=m.id) }}"
+                          onsubmit="return confirm('Delete this maintenance record?');">
+                        <button type="submit" class="btn btn-danger btn-sm">🗑</button>
+                    </form>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state" style="padding:2rem;">
+        <div class="empty-icon">🔧</div>
+        <div class="empty-title">No maintenance records</div>
+        <a href="{{ url_for('add_maintenance_route', vehicle_id=vehicle.id) }}" class="btn btn-primary" style="margin-top:1rem;">+ Add Maintenance</a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- FAULTS -->
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">⚠️ Fault Records</span>
+        <a href="{{ url_for('add_fault_route', vehicle_id=vehicle.id) }}" class="btn btn-primary btn-sm">+ Add Fault</a>
+    </div>
+    {% if faults %}
+    {% set cat_icons = {'engine':'🔧','electrical':'⚡','brakes':'🛑','suspension':'🔩','ac':'❄️','body':'🚗','tyre':'🔘','fuel':'⛽','other':'📋'} %}
+    {% set open_faults = faults|selectattr('status','equalto','open')|list %}
+    {% set prog_faults = faults|selectattr('status','equalto','in_progress')|list %}
+    {% set done_faults = faults|selectattr('status','equalto','resolved')|list %}
+
+    {% for group_label, group_faults, group_color in [
+    ('Open Faults', open_faults, 'var(--danger)'),
+    ('In Progress', prog_faults, 'var(--warning)'),
+    ('Resolved', done_faults, 'var(--success)')
+    ] %}
+    {% if group_faults %}
+    <div style="margin-bottom:1.25rem;">
+        <div style="font-size:0.78rem;font-weight:600;color:{{ group_color }};text-transform:uppercase;
+                    letter-spacing:0.5px;margin-bottom:0.5rem;">{{ group_label }} ({{ group_faults|length }})</div>
+        {% for f in group_faults %}
+        <div style="display:grid;grid-template-columns:auto 1fr auto;gap:0.75rem;align-items:start;
+                    padding:0.75rem;border-radius:8px;margin-bottom:0.4rem;
+                    border:1px solid {% if f.status=='open' and f.severity=='high' %}rgba(239,68,68,0.3){% elif f.status=='open' %}rgba(245,158,11,0.2){% else %}var(--border){% endif %};
+                    background:{% if f.status=='open' and f.severity=='high' %}rgba(239,68,68,0.05){% elif f.status=='resolved' %}rgba(16,185,129,0.03){% else %}transparent{% endif %};">
+            <!-- Icon -->
+            <div style="font-size:1.4rem;padding-top:0.1rem;">
+                {{ cat_icons.get(f.category or 'other', '📋') }}
+            </div>
+            <!-- Info -->
+            <div>
+                <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+                    <span style="font-weight:600;">{{ f.title }}</span>
+                    {% if f.severity == 'high' %}<span class="badge badge-danger">High</span>
+                    {% elif f.severity == 'medium' %}<span class="badge badge-warning">Medium</span>
+                    {% else %}<span class="badge badge-success">Low</span>{% endif %}
+                </div>
+                {% if f.description %}
+                <div style="font-size:0.82rem;color:var(--text-muted);margin-top:0.2rem;">
+                    {{ f.description[:100] }}{% if f.description|length > 100 %}…{% endif %}
+                </div>
+                {% endif %}
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.3rem;display:flex;gap:0.75rem;flex-wrap:wrap;">
+                    <span>📅 {{ f.date_reported }}</span>
+                    {% if f.km_at_fault %}<span>📍 {{ "{:,.0f}".format(f.km_at_fault) }} km</span>{% endif %}
+                    {% if f.repair_cost %}<span>💰 {{ "%.0f"|format(f.repair_cost) }}</span>{% endif %}
+                    {% if f.resolved_date %}<span>✅ {{ f.resolved_date }}</span>{% endif %}
+                </div>
+            </div>
+            <!-- Actions -->
+            <div style="display:flex;flex-direction:column;gap:0.3rem;align-items:flex-end;">
+                {% if f.status != 'resolved' %}
+                <form method="POST" action="{{ url_for('resolve_fault_route', vehicle_id=vehicle.id, fault_id=f.id) }}">
+                    <button type="submit" class="btn btn-sm" style="background:rgba(16,185,129,0.15);color:var(--success);border:1px solid var(--success);font-size:0.72rem;padding:0.2rem 0.5rem;">✔ Resolved</button>
+                </form>
+                {% endif %}
+                <div style="display:flex;gap:0.25rem;">
+                    <a href="{{ url_for('edit_fault_route', vehicle_id=vehicle.id, fault_id=f.id) }}" class="btn btn-warning btn-sm" style="font-size:0.75rem;padding:0.2rem 0.5rem;">✏️</a>
+                    <form method="POST" action="{{ url_for('delete_fault_route', vehicle_id=vehicle.id, fault_id=f.id) }}"
+                          onsubmit="return confirm('Delete this fault record?');">
+                        <button type="submit" class="btn btn-danger btn-sm" style="font-size:0.75rem;padding:0.2rem 0.5rem;">🗑</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endfor %}
+    {% else %}
+    <div class="empty-state" style="padding:2rem;">
+        <div class="empty-icon">✅</div>
+        <div class="empty-title">No fault records</div>
+        <a href="{{ url_for('add_fault_route', vehicle_id=vehicle.id) }}" class="btn btn-primary btn-sm" style="margin-top:0.75rem;">+ Add Fault</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

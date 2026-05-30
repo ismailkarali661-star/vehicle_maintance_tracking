@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Register – AutoTrack{% endblock %}
+{% block title %}Log In – AutoTrack{% endblock %}
 {% block extra_styles %}
 <style>
     .auth-wrapper { max-width: 420px; margin: 4rem auto; }
@@ -9,27 +9,23 @@
 {% endblock %}
 {% block content %}
 <div class="auth-wrapper">
-    <div class="auth-title">Register</div>
-    <p class="auth-sub">Create your free account.</p>
+    <div class="auth-title">Log In</div>
+    <p class="auth-sub">Access your account.</p>
     <div class="card">
         <form method="POST">
-            <div class="form-group">
-                <label class="form-label">Username</label>
-                <input type="text" name="username" class="form-control" placeholder="username" required minlength="3">
-            </div>
             <div class="form-group">
                 <label class="form-label">Email Address</label>
                 <input type="email" name="email" class="form-control" placeholder="example@mail.com" required>
             </div>
             <div class="form-group">
                 <label class="form-label">Password</label>
-                <input type="password" name="password" class="form-control" placeholder="At least 6 characters" required minlength="6">
+                <input type="password" name="password" class="form-control" placeholder="••••••••" required>
             </div>
-            <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:0.5rem;">Create Account</button>
+            <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:0.5rem;">Log In</button>
         </form>
     </div>
     <p style="text-align:center;margin-top:1.25rem;font-size:0.875rem;color:var(--text-muted);">
-        Already have an account? <a href="{{ url_for('login') }}">Log in</a>
+        Don't have an account? <a href="{{ url_for('register') }}">Register here</a>
     </p>
 </div>
 {% endblock %}

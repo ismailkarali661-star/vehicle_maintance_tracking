@@ -1,29 +1,287 @@
-{% extends 'base.html' %}
-{% block content %}
-<h4>🔧 Maintenance Advisor — {{ vehicle.brand }} {{ vehicle.model }}</h4>
+{% extends "base.html" %}
+{% block title %}Maintenance Analysis – {{ vehicle.brand }} {{ vehicle.model }}{% endblock %}
 
-{% if analysis.overdue %}
-<div class="alert alert-danger">
-    <h5>⚠️ Overdue Maintenance ({{ analysis.overdue|length }})</h5>
-    <p>Estimated urgent cost: ${{ analysis.urgent_cost_min|int }} – ${{ analysis.urgent_cost_max|int }}</p>
-    {% for item in analysis.overdue %}
-    <div class="card border-danger mb-2">
-        <div class="card-body py-2">
-            <strong>{{ item.maintenance_type }}</strong>
-            <span class="text-danger">— {{ item.km_remaining|int }} km overdue</span>
-            <small class="text-muted d-block">{{ item.notes }}</small>
+{% block extra_styles %}
+<style>
+    .advisor-layout {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 1.5rem;
+        align-items: start;
+    }
+    .sidebar-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.5rem;
+        position: sticky;
+        top: 1rem;
+    }
+    .health-ring {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Rajdhani', sans-serif;
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin: 0 auto 1rem;
+    }
+    .advisor-section {
+        margin-bottom: 1.5rem;
+    }
+    .advisor-section-title {
+        font-family: 'Rajdhani', sans-serif;
+        font-size: 1rem;
+        font-weight: 600;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .advisor-row {
+        display: grid;
+        grid-template-columns: 1fr auto auto auto;
+        gap: 0.5rem;
+        align-items: center;
+        padding: 0.6rem 0.75rem;
+        border-radius: 8px;
+        margin-bottom: 0.3rem;
+        font-size: 0.88rem;
+    }
+    .advisor-row:hover { background: rgba(255,255,255,0.04); }
+    .advisor-row.overdue { background: rgba(239,68,68,0.08); border-left: 3px solid var(--danger); }
+    .advisor-row.due { background: rgba(245,158,11,0.08); border-left: 3px solid var(--warning); }
+    .priority-dot {
+        width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+        display: inline-block; margin-right: 0.4rem;
+    }
+    .dot-critical { background: var(--danger); }
+    .dot-important { background: var(--warning); }
+    .dot-routine { background: #3b82f6; }
+    .km-chip {
+        font-size: 0.78rem;
+        padding: 0.15rem 0.5rem;
+        border-radius: 20px;
+        white-space: nowrap;
+        font-weight: 500;
+    }
+    .km-overdue { background: rgba(239,68,68,0.2); color: var(--danger); }
+    .km-due { background: rgba(245,158,11,0.2); color: var(--warning); }
+    .km-upcoming { background: rgba(59,130,246,0.2); color: #60a5fa; }
+    .km-good { background: rgba(16,185,129,0.15); color: var(--success); }
+    .cost-range { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; }
+    @media (max-width: 768px) {
+        .advisor-layout { grid-template-columns: 1fr; }
+        .sidebar-card { position: static; }
+        .advisor-row { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">Maintenance Analysis</div>
+        <div class="page-subtitle">{{ vehicle.brand }} {{ vehicle.model }} · {{ vehicle.year }} · {{ vehicle.plate }}</div>
+    </div>
+    <div style="display:flex;gap:0.5rem;">
+        <a href="{{ url_for('add_maintenance_route', vehicle_id=vehicle.id) }}" class="btn btn-primary btn-sm">+ Log Maintenance</a>
+        <a href="{{ url_for('vehicle_detail', vehicle_id=vehicle.id) }}" class="btn btn-secondary btn-sm">← Details</a>
+    </div>
+</div>
+
+{% if analysis %}
+{% set total = analysis.total_items %}
+{% set good_count = analysis.good|length %}
+{% set health = ((good_count / total * 100)|int) if total > 0 else 100 %}
+
+<div class="advisor-layout">
+
+    <div>
+        <div class="sidebar-card">
+            <div style="text-align:center;margin-bottom:1.5rem;">
+                {% if health >= 80 %}
+                <div class="health-ring" style="border: 6px solid var(--success);color:var(--success);">{{ health }}%</div>
+                <div style="font-size:0.85rem;color:var(--success);">Good Condition</div>
+                {% elif health >= 50 %}
+                <div class="health-ring" style="border: 6px solid var(--warning);color:var(--warning);">{{ health }}%</div>
+                <div style="font-size:0.85rem;color:var(--warning);">Attention Required</div>
+                {% else %}
+                <div class="health-ring" style="border: 6px solid var(--danger);color:var(--danger);">{{ health }}%</div>
+                <div style="font-size:0.85rem;color:var(--danger);">Urgent Service Needed</div>
+                {% endif %}
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.25rem;">Maintenance Health</div>
+            </div>
+
+            <div style="margin-bottom:1rem;">
+                <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.5rem;">Current Mileage</div>
+                <div style="font-family:'Rajdhani',sans-serif;font-size:1.5rem;font-weight:700;">{{ "{:,.0f}".format(vehicle.current_km) }} km</div>
+            </div>
+
+            <div style="margin-bottom:1rem;">
+                <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.25rem;">Engine Configuration</div>
+                {% if vehicle.motor %}
+                <div style="font-size:0.9rem;font-weight:600;">{{ vehicle.motor }}</div>
+                <div style="font-size:0.75rem;margin-top:0.2rem;">
+                    {% if analysis.engine_cat == 'large' %}
+                    <span style="color:var(--danger);">⬤</span> High displacement — Oil swap every 7,500 km
+                    {% elif analysis.engine_cat == 'small' %}
+                    <span style="color:var(--success);">⬤</span> Compact displacement — Oil swap every 15,000 km
+                    {% else %}
+                    <span style="color:var(--warning);">⬤</span> Medium displacement — Standard parameters
+                    {% endif %}
+                </div>
+                {% else %}
+                <div style="font-size:0.8rem;color:var(--text-muted);">
+                    <a href="{{ url_for('edit_vehicle_route', vehicle_id=vehicle.id) }}" style="color:var(--accent2);">Add engine specifications →</a>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if analysis.catalog %}
+            <div style="margin-bottom:1rem;">
+                <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.25rem;">Catalog Sync</div>
+                <div style="font-size:0.85rem;">{{ analysis.catalog.brand }} {{ analysis.catalog.model }}</div>
+                <div style="font-size:0.78rem;color:var(--text-muted);">{{ analysis.catalog.category|capitalize }}</div>
+            </div>
+            {% endif %}
+
+            <hr style="border-color:var(--border);margin:1rem 0;">
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;text-align:center;margin-bottom:1rem;">
+                <div>
+                    <div style="font-size:1.2rem;font-weight:700;color:var(--danger);">{{ analysis.overdue|length }}</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);">Overdue</div>
+                </div>
+                <div>
+                    <div style="font-size:1.2rem;font-weight:700;color:var(--warning);">{{ analysis.due|length }}</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);">Due Soon</div>
+                </div>
+                <div>
+                    <div style="font-size:1.2rem;font-weight:700;color:#60a5fa;">{{ analysis.upcoming|length }}</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);">Upcoming</div>
+                </div>
+                <div>
+                    <div style="font-size:1.2rem;font-weight:700;color:var(--success);">{{ analysis.good|length }}</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);">Up-to-Date</div>
+                </div>
+            </div>
+
+            {% if analysis.urgent_cost_min > 0 %}
+            <div style="background:rgba(239,68,68,0.1);border-radius:8px;padding:0.75rem;text-align:center;">
+                <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:0.2rem;">Urgent Budget Estimate</div>
+                <div style="font-weight:700;color:var(--danger);">${{ analysis.urgent_cost_min|int }} – ${{ analysis.urgent_cost_max|int }}</div>
+            </div>
+            {% endif %}
+
+            <div style="margin-top:1rem;">
+                <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:0.4rem;">Priority Indexes</div>
+                <div style="font-size:0.78rem;display:flex;flex-direction:column;gap:0.25rem;">
+                    <span><span class="priority-dot dot-critical"></span>Critical</span>
+                    <span><span class="priority-dot dot-important"></span>Important</span>
+                    <span><span class="priority-dot dot-routine"></span>Routine</span>
+                </div>
+            </div>
         </div>
     </div>
-    {% endfor %}
-</div>
-{% endif %}
 
-{% for item in analysis.upcoming %}
-<div class="card mb-2">
-    <div class="card-body py-2">
-        <strong>{{ item.maintenance_type }}</strong>
-        <span class="text-warning">— {{ item.km_remaining }} km remaining</span>
+    <div>
+
+        {% if analysis.overdue %}
+        <div class="card advisor-section" style="border-color:rgba(239,68,68,0.4);">
+            <div class="advisor-section-title" style="color:var(--danger);">⛔ Overdue Maintenance Requirements</div>
+            {% for item in analysis.overdue %}
+            <div class="advisor-row overdue">
+                <div>
+                    <span class="priority-dot dot-{{ item.priority }}"></span>
+                    <strong>{{ item.maintenance_type }}</strong>
+                    {% if item.interval_adjusted %}<span style="font-size:0.7rem;background:rgba(59,130,246,0.2);color:#93c5fd;border-radius:4px;padding:0.1rem 0.35rem;margin-left:0.3rem;">tuned for engine displacement</span>{% endif %}
+                    {% if item.last_km %}<span style="color:var(--text-muted);font-size:0.78rem;"> — Last: {{ "{:,.0f}".format(item.last_km) }} km</span>{% endif %}
+                </div>
+                <span class="km-chip km-overdue">{{ item.km_remaining|abs|int }} km overdue</span>
+                <span class="cost-range">{% if item.cost_min %}${{ item.cost_min }}–${{ item.cost_max }}{% endif %}</span>
+                <a href="{{ url_for('add_maintenance_route', vehicle_id=vehicle.id) }}?type={{ item.maintenance_type | urlencode }}&quick=1" class="btn btn-danger btn-sm" style="font-size:0.75rem;padding:0.2rem 0.5rem;">Log Service</a>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if analysis.due %}
+        <div class="card advisor-section" style="border-color:rgba(245,158,11,0.4);">
+            <div class="advisor-section-title" style="color:var(--warning);">⚠️ Service Needed Soon (Within 1,000 km)</div>
+            {% for item in analysis.due %}
+            <div class="advisor-row due">
+                <div>
+                    <span class="priority-dot dot-{{ item.priority }}"></span>
+                    <strong>{{ item.maintenance_type }}</strong>
+                    {% if item.last_km %}<span style="color:var(--text-muted);font-size:0.78rem;"> — Last: {{ "{:,.0f}".format(item.last_km) }} km</span>{% endif %}
+                </div>
+                <span class="km-chip km-due">{{ item.km_remaining|int }} km remaining</span>
+                <span class="cost-range">{% if item.cost_min %}${{ item.cost_min }}–${{ item.cost_max }}{% endif %}</span>
+                <span></span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if analysis.upcoming %}
+        <div class="card advisor-section">
+            <div class="advisor-section-title">🔔 Plan & Schedule Next (1,000–5,000 km range)</div>
+            {% for item in analysis.upcoming %}
+            <div class="advisor-row">
+                <div>
+                    <span class="priority-dot dot-{{ item.priority }}"></span>
+                    {{ item.maintenance_type }}
+                    {% if item.last_km %}<span style="color:var(--text-muted);font-size:0.78rem;"> — Last: {{ "{:,.0f}".format(item.last_km) }} km</span>{% endif %}
+                </div>
+                <span class="km-chip km-upcoming">{{ item.km_remaining|int }} km remaining</span>
+                <span class="cost-range">{% if item.cost_min %}${{ item.cost_min }}–${{ item.cost_max }}{% endif %}</span>
+                <span></span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if analysis.good %}
+        <div class="card advisor-section">
+            <div class="advisor-section-title" style="color:var(--success);">✅ Up-to-Date & Stable Components</div>
+            {% for item in analysis.good %}
+            <div class="advisor-row">
+                <div>
+                    <span class="priority-dot dot-{{ item.priority }}"></span>
+                    {{ item.maintenance_type }}
+                    {% if item.last_km %}<span style="color:var(--text-muted);font-size:0.78rem;"> — Last: {{ "{:,.0f}".format(item.last_km) }} km</span>{% endif %}
+                </div>
+                {% if item.km_remaining is not none %}
+                <span class="km-chip km-good">{{ item.km_remaining|int }} km remaining</span>
+                {% elif item.last_date %}
+                <span class="km-chip km-good">Logged on {{ item.last_date }}</span>
+                {% else %}
+                <span class="km-chip km-upcoming">No log history found</span>
+                {% endif %}
+                <span class="cost-range">{% if item.cost_min %}${{ item.cost_min }}–${{ item.cost_max }}{% endif %}</span>
+                <span></span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.5rem;">
+            Analyses are computed utilizing target {{ vehicle.fuel_type|capitalize }} template maps. Mileage thresholds constitute generalized recommendations; cross-reference your specific factory user manual.
+        </div>
     </div>
 </div>
-{% endfor %}
+
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">🔧</div>
+    <div class="empty-title">Analysis Unfeasible</div>
+    <p style="margin:0.5rem 0;">Vehicle technical configurations are incomplete, or template keys are currently missing.</p>
+</div>
+{% endif %}
 {% endblock %}

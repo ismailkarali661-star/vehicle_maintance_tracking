@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}AutoTrack – Vehicle Maintenance Tracker{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .hero {
+        min-height: calc(100vh - 60px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .hero::before {
+        content: '';
+        position: absolute;
+        width: 600px;
+        height: 600px;
+        background: radial-gradient(circle, rgba(232,67,26,0.08) 0%, transparent 70%);
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -60%);
+        pointer-events: none; /* Prevents blocking clicks */
+        z-index: 1;
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 2;
+        width: 100%;
+    }
+
+    .hero-title {
+        font-family: 'Rajdhani', sans-serif;
+        font-size: 5rem;
+        font-weight: 700;
+        letter-spacing: 4px;
+        line-height: 1;
+    }
+
+    .hero-title span {
+        color: var(--accent);
+    }
+
+    .hero-sub {
+        color: var(--text-muted);
+        font-size: 1.1rem;
+        margin: 1.5rem 0 2.5rem;
+        max-width: 480px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .hero-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .features {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+        margin-top: 4rem;
+        text-align: left;
+    }
+
+    .feature {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.5rem;
+    }
+
+    .feature-icon {
+        font-size: 2rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .feature-title {
+        font-family: 'Rajdhani', sans-serif;
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 0.4rem;
+    }
+
+    .feature-desc {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        line-height: 1.6;
+    }
+
+    @media (max-width: 768px) {
+        .hero-title {
+            font-size: 3rem;
+        }
+
+        .features {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <div class="hero-content">
+
+        <div class="hero-title">
+            AUTO<span>TRACK</span>
+        </div>
+
+        <p class="hero-sub">
+            Track your vehicle maintenance history, active faults, and overall expenses all in one single place.
+        </p>
+
+        <div class="hero-buttons">
+            <a href="{{ url_for('register') }}" class="btn btn-primary">
+                Get Started for Free
+            </a>
+
+            <a href="{{ url_for('login') }}" class="btn btn-secondary">
+                Log In
+            </a>
+        </div>
+
+        <div class="features">
+
+            <div class="feature">
+                <div class="feature-icon">🚗</div>
+                <div class="feature-title">Multi-Vehicle Support</div>
+                <div class="feature-desc">
+                    Manage multiple vehicles under a single account, with custom tracking profiles for each.
+                </div>
+            </div>
+
+            <div class="feature">
+                <div class="feature-icon">🔧</div>
+                <div class="feature-title">Maintenance Logs</div>
+                <div class="feature-desc">
+                    Keep tabs on engine oil, tire rotation, brakes, or custom per-service maintenance entries.
+                </div>
+            </div>
+
+            <div class="feature">
+                <div class="feature-icon">⚡</div>
+                <div class="feature-title">Smart Reminders</div>
+                <div class="feature-desc">
+                    Never miss a service window with mileage and date-based perodic maintenance warnings.
+                </div>
+            </div>
+
+            <div class="feature">
+                <div class="feature-icon">⚠️</div>
+                <div class="feature-title">Fault Tracking</div>
+                <div class="feature-desc">
+                    Log vehicle errors, update statuses, and closely monitor diagnosis and resolution cycles.
+                </div>
+            </div>
+
+            <div class="feature">
+                <div class="feature-icon">💰</div>
+                <div class="feature-title">Expense Analysis</div>
+                <div class="feature-desc">
+                    Analyze the total cost of ownership with aggregated service, part, and repair expense metrics.
+                </div>
+            </div>
+
+            <div class="feature">
+                <div class="feature-icon">🔒</div>
+                <div class="feature-title">Secure & Private</div>
+                <div class="feature-desc">
+                    Your logs are tied securely to your login session; data is entirely isolated and encrypted.
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

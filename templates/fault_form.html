@@ -1,19 +1,294 @@
-<div class="mb-3">
-    <label class="form-label">Kategori</label>
-    <select name="category" class="form-select">
-        <option value="motor">Motor</option>
-        <option value="elektrik">Elektrik</option>
-        <option value="fren">Fren</option>
-        <option value="susp">Süspansiyon</option>
-        <option value="diger" selected>Diğer</option>
-    </select>
+{% extends "base.html" %}
+{% block title %}{% if action == 'add' %}Add Fault{% else %}Edit Fault{% endif %} – AutoTrack{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .category-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+        margin-top: 0.4rem;
+    }
+    .cat-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.6rem 0.4rem;
+        border: 1.5px solid var(--border);
+        border-radius: 8px;
+        background: transparent;
+        color: var(--text-muted);
+        font-size: 0.78rem;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+    .cat-btn:hover { border-color: var(--accent); color: var(--text); background: rgba(255,255,255,0.04); }
+    .cat-btn.active { border-color: var(--accent); background: rgba(99,102,241,0.15); color: var(--text); }
+    .cat-btn .cat-icon { font-size: 1.3rem; }
+    .sev-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+        margin-top: 0.4rem;
+    }
+    .sev-btn {
+        padding: 0.6rem;
+        border: 1.5px solid var(--border);
+        border-radius: 8px;
+        background: transparent;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+        text-align: center;
+    }
+    .sev-btn.sev-low { color: var(--success); }
+    .sev-btn.sev-low.active { border-color: var(--success); background: rgba(16,185,129,0.15); }
+    .sev-btn.sev-medium { color: var(--warning); }
+    .sev-btn.sev-medium.active { border-color: var(--warning); background: rgba(245,158,11,0.15); }
+    .sev-btn.sev-high { color: var(--danger); }
+    .sev-btn.sev-high.active { border-color: var(--danger); background: rgba(239,68,68,0.15); }
+    .status-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+        margin-top: 0.4rem;
+    }
+    .status-btn {
+        padding: 0.55rem;
+        border: 1.5px solid var(--border);
+        border-radius: 8px;
+        background: transparent;
+        font-size: 0.82rem;
+        cursor: pointer;
+        transition: all 0.15s;
+        text-align: center;
+        color: var(--text-muted);
+    }
+    .status-btn:hover { border-color: var(--accent); color: var(--text); }
+    .status-btn.active { border-color: var(--accent2); background: rgba(16,185,129,0.1); color: var(--text); }
+    .resolve-section { display: none; }
+    @media (max-width: 480px) {
+        .category-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:640px;margin:0 auto;">
+    <div class="page-header">
+        <div>
+            <div class="page-title">{% if action == 'add' %}Add Fault Record{% else %}Edit Fault Record{% endif %}</div>
+            <div class="page-subtitle">{{ vehicle.brand }} {{ vehicle.model }} – {{ vehicle.plate }} · {{ "{:,.0f}".format(vehicle.current_km) }} km</div>
+        </div>
+        <a href="{{ url_for('vehicle_detail', vehicle_id=vehicle.id) }}" class="btn btn-secondary">← Back</a>
+    </div>
+    <div class="card">
+        <form method="POST" id="faultForm">
+
+            <div class="form-group">
+                <label class="form-label">Fault Category</label>
+                <input type="hidden" name="category" id="categoryInput"
+                       value="{{ fault.category if fault else 'other' }}">
+                <div class="category-grid" id="categoryGrid">
+                    <button type="button" class="cat-btn" data-cat="engine">
+                        <span class="cat-icon">🔧</span><span>Engine</span>
+                    </button>
+                    <button type="button" class="cat-btn" data-cat="electrical">
+                        <span class="cat-icon">⚡</span><span>Electrical</span>
+                    </button>
+                    <button type="button" class="cat-btn" data-cat="brakes">
+                        <span class="cat-icon">🛑</span><span>Brakes</span>
+                    </button>
+                    <button type="button" class="cat-btn" data-cat="suspension">
+                        <span class="cat-icon">🔩</span><span>Suspension</span>
+                    </button>
+                    <button type="button" class="cat-btn" data-cat="climate">
+                        <span class="cat-icon">❄️</span><span>Climate Control</span>
+                    </button>
+                    <button type="button" class="cat-btn" data-cat="bodywork">
+                        <span class="cat-icon">🚗</span><span>Bodywork</span>
+                    </button>
+                    <button type="button" class="cat-btn" data-cat="tires">
+                        <span class="cat-icon">🔘</span><span>Tires</span>
+                    </button>
+                    <button type="button" class="cat-btn" data-cat="fuel">
+                        <span class="cat-icon">⛽</span><span>Fuel System</span>
+                    </button>
+                    <button type="button" class="cat-btn" data-cat="other">
+                        <span class="cat-icon">📋</span><span>Other</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Fault Title *</label>
+                <input type="text" name="title" id="faultTitle" class="form-control"
+                       placeholder="Short description of the fault" required
+                       value="{{ fault.title if fault else '' }}">
+                <div id="titleSuggestions" style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.4rem;"></div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea name="description" class="form-control" rows="3"
+                          placeholder="Symptoms, driving conditions, warning codes, notes..."></textarea>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Date Reported *</label>
+                    <input type="date" name="date_reported" id="faultDate" class="form-control" required
+                           value="{{ fault.date_reported if fault else '' }}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Mileage at Fault Occurrence</label>
+                    <input type="number" name="km_at_fault" class="form-control"
+                           placeholder="{{ vehicle.current_km }}" min="0"
+                           value="{{ fault.km_at_fault if fault and fault.km_at_fault else '' }}">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Severity Level</label>
+                <input type="hidden" name="severity" id="severityInput"
+                       value="{{ fault.severity if fault else 'medium' }}">
+                <div class="sev-row">
+                    <button type="button" class="sev-btn sev-low" data-sev="low">Low</button>
+                    <button type="button" class="sev-btn sev-medium" data-sev="medium">Medium</button>
+                    <button type="button" class="sev-btn sev-high" data-sev="high">High</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Status</label>
+                <input type="hidden" name="status" id="statusInput"
+                       value="{{ fault.status if fault else 'open' }}">
+                <div class="status-row">
+                    <button type="button" class="status-btn" data-status="open">🔴 Open</button>
+                    <button type="button" class="status-btn" data-status="in_progress">🟡 In Progress</button>
+                    <button type="button" class="status-btn" data-status="resolved">🟢 Resolved</button>
+                </div>
+            </div>
+
+            <div class="resolve-section" id="resolveSection">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Resolution Date</label>
+                        <input type="date" name="resolved_date" id="resolvedDate" class="form-control"
+                               value="{{ fault.resolved_date if fault else '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Repair Cost ($)</label>
+                        <input type="number" name="repair_cost" class="form-control"
+                               placeholder="0" min="0" step="0.01"
+                               value="{{ fault.repair_cost if fault else '' }}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group" id="costAlone" style="display:none;">
+                <label class="form-label">Estimated Repair Cost ($)</label>
+                <input type="number" name="repair_cost" id="repairCostAlone" class="form-control"
+                       placeholder="0" min="0" step="0.01">
+            </div>
+
+            <div style="display:flex;gap:0.75rem;justify-content:flex-end;margin-top:1rem;">
+                <a href="{{ url_for('vehicle_detail', vehicle_id=vehicle.id) }}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                    {% if action == 'add' %}Add Fault{% else %}Save Changes{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
-<div class="mb-3">
-    <label class="form-label">Önem Derecesi</label>
-    <select name="severity" class="form-select">
-        <option value="critical">Kritik</option>
-        <option value="high">Yüksek</option>
-        <option value="medium" selected>Orta</option>
-        <option value="low">Düşük</option>
-    </select>
-</div>
+
+<script>
+    // Smart suggestions translated to match English catalog data
+    const SUGGESTIONS = {
+        engine: ['Oil leak discovered', 'Unusual engine vibration/noise', 'Misfires & power loss', 'Engine overheating', 'Check Engine light triggered', 'Struggling to crank/start'],
+        electrical: ['Battery holding low charge', 'Headlight/Taillight dead', 'Blown circuit fuse', 'Alternator/Charging issue', 'Backup camera or parking sensor error'],
+        brakes: ['Squealing brake noise', 'Spongy brake pedal pressure', 'Parking brake struggling to hold', 'ABS warning light active', 'Brake fluid level low'],
+        suspension: ['Clunky transmission shifts', 'Stiff/Rough driving profile', 'Knocking noise over speed bumps', 'Steering wheel wobble', 'Uneven wheel tracking'],
+        climate: ['AC system blowing warm air', 'Heater core struggling to warm', 'Loud blower fan operation', 'Musty odor from vents', 'AC refrigerant lines leaking'],
+        bodywork: ['Scratches/Paint chips', 'Door panel dent', 'Power lock mechanism failure', 'Power window stuck', 'Side-view mirror glass broken'],
+        tires: ['Flat tire/Slow leak', 'Sidewall bubble puncture', 'TPMS dashboard alert active', 'Uneven tread wear pattern', 'Wheel alignment drift'],
+        fuel: ['Fuel odor/Leakage detected', 'Abnormally high fuel consumption', 'Excessive tailpipe smoke', 'Fuel pump operational lag', 'DPF filter load warning'],
+        other: [],
+    };
+
+    function setCategory(cat) {
+        document.getElementById('categoryInput').value = cat;
+        document.querySelectorAll('.cat-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.cat === cat);
+        });
+        showSuggestions(cat);
+    }
+
+    function showSuggestions(cat) {
+        const box = document.getElementById('titleSuggestions');
+        const items = SUGGESTIONS[cat] || [];
+        box.innerHTML = items.map(s =>
+            `<button type="button" onclick="document.getElementById('faultTitle').value='${s}'"
+             style="font-size:0.75rem;padding:0.2rem 0.6rem;border-radius:20px;border:1px solid var(--border);
+                    background:rgba(255,255,255,0.04);color:var(--text-muted);cursor:pointer;">${s}</button>`
+        ).join('');
+    }
+
+    function setSeverity(sev) {
+        document.getElementById('severityInput').value = sev;
+        document.querySelectorAll('.sev-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.sev === sev);
+        });
+    }
+
+    function setStatus(st) {
+        document.getElementById('statusInput').value = st;
+        document.querySelectorAll('.status-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.status === st);
+        });
+        const resolveSection = document.getElementById('resolveSection');
+        const costAlone = document.getElementById('costAlone');
+        if (st === 'resolved') {
+            resolveSection.style.display = 'block';
+            costAlone.style.display = 'none';
+            if (!document.getElementById('resolvedDate').value) {
+                document.getElementById('resolvedDate').value = new Date().toISOString().split('T')[0];
+            }
+        } else {
+            resolveSection.style.display = 'none';
+            costAlone.style.display = 'none';
+        }
+    }
+
+    // Category click event listeners
+    document.querySelectorAll('.cat-btn').forEach(b => {
+        b.addEventListener('click', () => setCategory(b.dataset.cat));
+    });
+    // Severity click event listeners
+    document.querySelectorAll('.sev-btn').forEach(b => {
+        b.addEventListener('click', () => setSeverity(b.dataset.sev));
+    });
+    // Status click event listeners
+    document.querySelectorAll('.status-btn').forEach(b => {
+        b.addEventListener('click', () => setStatus(b.dataset.status));
+    });
+
+    // Self-invoking initialize scope
+    (function() {
+        const cat = document.getElementById('categoryInput').value || 'other';
+        const sev = document.getElementById('severityInput').value || 'medium';
+        const st = document.getElementById('statusInput').value || 'open';
+        setCategory(cat);
+        setSeverity(sev);
+        setStatus(st);
+
+        // Auto-fill today's date for new structural fields
+        const dateInput = document.getElementById('faultDate');
+        if (dateInput && !dateInput.value) {
+            dateInput.value = new Date().toISOString().split('T')[0];
+        }
+    })();
+</script>
+{% endblock %}

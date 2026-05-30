@@ -2,42 +2,274 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}AutoTrack{% endblock %}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0d0f12;
+            --surface: #161a20;
+            --surface2: #1e242c;
+            --border: #252c36;
+            --accent: #e8431a;
+            --accent2: #ff6b40;
+            --text: #e8eaed;
+            --text-muted: #7a8394;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
+        a { color: var(--accent2); text-decoration: none; }
+        a:hover { color: var(--accent); }
+
+        /* NAV */
+        nav {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 60px;
+            position: sticky; top: 0; z-index: 100;
+        }
+        .nav-brand {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: 2px;
+        }
+        .nav-brand span { color: var(--accent); }
+        .nav-links { display: flex; gap: 0.5rem; align-items: center; }
+        .nav-links a {
+            color: var(--text-muted);
+            padding: 0.4rem 0.9rem;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .nav-links a:hover { color: var(--text); background: var(--surface2); }
+        .nav-links a.nav-active { color: var(--text); background: var(--surface2); border-bottom: 2px solid var(--accent); border-radius: 6px 6px 0 0; }
+        .nav-user { font-size: 0.8rem; color: var(--text-muted); }
+        .nav-user span { color: var(--accent2); font-weight: 600; }
+
+        /* MAIN */
+        main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+
+        /* FLASH */
+        .flashes { list-style: none; margin-bottom: 1.5rem; }
+        .flash {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+            border-left: 3px solid;
+        }
+        .flash.success { background: rgba(34,197,94,0.1); border-color: var(--success); color: #86efac; }
+        .flash.danger  { background: rgba(239,68,68,0.1);  border-color: var(--danger);  color: #fca5a5; }
+        .flash.warning { background: rgba(245,158,11,0.1); border-color: var(--warning); color: #fcd34d; }
+        .flash.info    { background: rgba(59,130,246,0.1); border-color: var(--info);    color: #93c5fd; }
+
+        /* CARDS */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.25rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .card-title {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        /* BUTTONS */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.5rem 1.1rem;
+            border-radius: 7px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover { background: var(--accent2); color: white; }
+        .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+        .btn-secondary:hover { border-color: var(--accent); color: var(--accent2); }
+        .btn-danger { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+        .btn-danger:hover { background: rgba(239,68,68,0.25); }
+        .btn-sm { padding: 0.3rem 0.7rem; font-size: 0.8rem; }
+        .btn-warning { background: rgba(245,158,11,0.15); color: #fcd34d; border: 1px solid rgba(245,158,11,0.3); }
+        .btn-success { background: rgba(34,197,94,0.15); color: #86efac; border: 1px solid rgba(34,197,94,0.3); }
+
+        /* FORM */
+        .form-group { margin-bottom: 1.1rem; }
+        .form-label { display: block; font-size: 0.8rem; font-weight: 500; color: var(--text-muted); margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-control {
+            width: 100%;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            color: var(--text);
+            padding: 0.6rem 0.9rem;
+            font-size: 0.9rem;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        .form-control:focus { outline: none; border-color: var(--accent); }
+        .form-control option { background: var(--surface2); }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+        /* TABLE */
+        table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+        thead th { padding: 0.75rem 1rem; text-align: left; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+        tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+        tbody tr:hover { background: var(--surface2); }
+        tbody td { padding: 0.75rem 1rem; vertical-align: middle; }
+        tbody tr:last-child { border-bottom: none; }
+
+        /* BADGES */
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .badge-success { background: rgba(34,197,94,0.15); color: #86efac; }
+        .badge-danger  { background: rgba(239,68,68,0.15);  color: #f87171; }
+        .badge-warning { background: rgba(245,158,11,0.15); color: #fcd34d; }
+        .badge-info    { background: rgba(59,130,246,0.15); color: #93c5fd; }
+        .badge-muted   { background: var(--surface2); color: var(--text-muted); }
+
+        /* PAGE HEADER */
+        .page-header { margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; }
+        .page-title { font-family: 'Rajdhani', sans-serif; font-size: 2rem; font-weight: 700; letter-spacing: 1px; }
+        .page-subtitle { color: var(--text-muted); font-size: 0.875rem; margin-top: 0.2rem; }
+
+        /* GRID */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+
+        /* STAT */
+        .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; }
+        .stat-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-value { font-family: 'Rajdhani', sans-serif; font-size: 2rem; font-weight: 700; margin-top: 0.25rem; }
+        .stat-sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.1rem; }
+
+        /* EMPTY STATE */
+        .empty-state { text-align: center; padding: 3rem; color: var(--text-muted); }
+        .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+        .empty-title { font-family: 'Rajdhani', sans-serif; font-size: 1.3rem; color: var(--text); }
+
+        /* CONFIRM FORM */
+        .confirm-form { display: inline; }
+
+        @media (max-width: 768px) {
+            .form-row { grid-template-columns: 1fr; }
+            .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+            nav { padding: 0 1rem; }
+            main { padding: 1rem; }
+        }
+    </style>
+    {% block extra_styles %}{% endblock %}
 </head>
 <body>
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container">
-        <a class="navbar-brand" href="/">🚗 AutoTrack</a>
-        <div class="collapse navbar-collapse">
-            <ul class="navbar-nav ms-auto">
-                {% if session.user_id %}
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('vehicles') }}">My Vehicles</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('logout') }}">Logout ({{ session.username }})</a>
-                </li>
-                {% else %}
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">Login</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('register') }}">Register</a></li>
-                {% endif %}
-            </ul>
-        </div>
+<nav>
+    <a href="{{ url_for('index') }}" class="nav-brand">AUTO<span>TRACK</span></a>
+    {% if session.get('user_id') %}
+    <div class="nav-links">
+        {% set ep = request.endpoint %}
+        <a href="{{ url_for('dashboard') }}" class="{% if ep == 'dashboard' %}nav-active{% endif %}">📊 Dashboard</a>
+        <a href="{{ url_for('vehicles') }}" class="{% if ep in ['vehicles','add_vehicle_route','edit_vehicle_route','vehicle_detail','vehicle_advisor','add_maintenance_route','edit_maintenance_route','delete_maintenance_route','add_fault_route','edit_fault_route','resolve_fault_route','delete_fault_route'] %}nav-active{% endif %}">🚗 My Vehicles</a>
+        <a href="{{ url_for('search_maintenance_route') }}" class="{% if ep == 'search_maintenance_route' %}nav-active{% endif %}">🔍 Search Maintenance</a>
+        <a href="{{ url_for('vehicle_buyer_guide') }}" class="{% if ep == 'vehicle_buyer_guide' %}nav-active{% endif %}">📋 Buyer's Guide</a>
     </div>
+    {% endif %}
 </nav>
-<div class="container mt-4">
+<main>
     {% with messages = get_flashed_messages(with_categories=true) %}
-    {% for category, message in messages %}
-    <div class="alert alert-{{ category }}">{{ message }}</div>
-    {% endfor %}
+    {% if messages %}
+    <ul class="flashes">
+        {% for category, message in messages %}
+        <li class="flash {{ category }}" style="display:flex;justify-content:space-between;align-items:center;">
+            <span>{{ message }}</span>
+            <button onclick="this.parentElement.style.display='none'" style="background:none;border:none;cursor:pointer;color:inherit;font-size:1.1rem;opacity:0.6;padding:0 0 0 1rem;line-height:1;">✕</button>
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
     {% endwith %}
+
     {% block content %}{% endblock %}
+</main>
+
+<div id="kmModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.75);align-items:center;justify-content:center;">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:2rem;min-width:320px;max-width:400px;width:90%;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+            <div>
+                <div style="font-family:'Rajdhani',sans-serif;font-size:1.3rem;font-weight:700;">Update Mileage</div>
+                <div id="kmModalVehicle" style="font-size:0.8rem;color:var(--text-muted);margin-top:0.1rem;"></div>
+            </div>
+            <button onclick="closeKmModal()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.3rem;line-height:1;">✕</button>
+        </div>
+        <form id="kmModalForm" method="POST">
+            <div class="form-group">
+                <label class="form-label">Current Mileage (km) *</label>
+                <input type="number" name="current_km" id="kmModalInput" class="form-control"
+                       min="0" required placeholder="Enter mileage value" style="font-size:1.1rem;">
+            </div>
+            <div style="display:flex;gap:0.75rem;justify-content:flex-end;margin-top:0.5rem;">
+                <button type="button" onclick="closeKmModal()" class="btn btn-secondary">Cancel</button>
+                <button type="submit" class="btn btn-primary">Update</button>
+            </div>
+        </form>
+    </div>
 </div>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    function openKmModal(vehicleId, currentKm, vehicleName) {
+        document.getElementById('kmModalForm').action = '/vehicles/' + vehicleId + '/update-km';
+        document.getElementById('kmModalInput').value = currentKm;
+        document.getElementById('kmModalVehicle').textContent = vehicleName;
+        const modal = document.getElementById('kmModal');
+        modal.style.display = 'flex';
+        setTimeout(() => document.getElementById('kmModalInput').focus(), 50);
+    }
+    function closeKmModal() {
+        document.getElementById('kmModal').style.display = 'none';
+    }
+    document.getElementById('kmModal').addEventListener('click', function(e) {
+        if (e.target === this) closeKmModal();
+    });
+</script>
 </body>
 </html>

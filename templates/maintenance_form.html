@@ -1,58 +1,143 @@
-{% extends 'base.html' %}
-{% block title %}Bakım Kaydı{% endblock %}
+{% extends "base.html" %}
+{% block title %}{% if action == 'add' %}Add Maintenance{% else %}Edit Maintenance{% endif %} – AutoTrack{% endblock %}
 {% block content %}
-<div class="row">
-    <div class="col-md-8">
-        <h4>{{ 'Bakım Düzenle' if action == 'edit' else 'Bakım Ekle' }} — {{ vehicle.brand }} {{ vehicle.model }}</h4>
-        <form method="POST" class="mt-3">
-            <div class="mb-3">
-                <label class="form-label">Bakım Türü *</label>
-                <input type="text" name="maintenance_type" class="form-control" required
-                       value="{{ maintenance.maintenance_type if maintenance else '' }}">
+<div style="max-width:580px;margin:0 auto;">
+    <div class="page-header">
+        <div>
+            <div class="page-title">{% if action == 'add' %}Add Maintenance Log{% else %}Edit Maintenance Log{% endif %}</div>
+            <div class="page-subtitle">{{ vehicle.brand }} {{ vehicle.model }} – {{ vehicle.plate }}</div>
+        </div>
+        <a href="{{ url_for('vehicle_detail', vehicle_id=vehicle.id) }}" class="btn btn-secondary">← Back</a>
+    </div>
+    <div class="card">
+        {% if quick %}
+        <div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);border-radius:8px;padding:0.75rem 1rem;margin-bottom:1.25rem;font-size:0.85rem;color:#93c5fd;">
+            Maintenance type and date have been pre-filled. Please enter only the mileage and cost.
+        </div>
+        {% endif %}
+        <form method="POST">
+            <div class="form-group">
+                <label class="form-label">Maintenance Type *</label>
+                {% if quick %}
+                <input type="text" name="maintenance_type" class="form-control"
+                       value="{{ prefill_type }}" required
+                       style="opacity:0.8;background:var(--surface);" readonly>
+                {% else %}
+                <input type="text" name="maintenance_type" class="form-control" placeholder="Enter maintenance type"
+                       required value="{{ maintenance.maintenance_type if maintenance else prefill_type }}"
+                       list="maintenance-types">
+                <datalist id="maintenance-types">
+                    <option value="Engine Oil Change">
+                    <option value="Tire Rotation">
+                    <option value="Brake Pads Replacement">
+                    <option value="Air Filter Replacement">
+                    <option value="Oil Filter Replacement">
+                    <option value="Cabin Filter Replacement">
+                    <option value="Fuel Filter Replacement">
+                    <option value="Timing Belt Replacement">
+                    <option value="Battery Replacement">
+                    <option value="Spark Plugs Replacement">
+                    <option value="Coolant Renewal">
+                    <option value="Periodic Maintenance">
+                </datalist>
+                {% endif %}
             </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Tarih *</label>
-                    <input type="date" name="date" class="form-control" required
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Maintenance Date *</label>
+                    <input type="date" name="date" id="maintDate" class="form-control" required
                            value="{{ maintenance.date if maintenance else '' }}">
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Km (bakım anında) *</label>
-                    <input type="number" name="km_at_service" class="form-control" required
-                           value="{{ maintenance.km_at_service if maintenance else '' }}">
+                <div class="form-group">
+                    <label class="form-label">Mileage at Service *</label>
+                    <input type="number" name="km_at_service" class="form-control"
+                           min="0" required
+                           value="{{ maintenance.km_at_service if maintenance else vehicle.current_km }}">
                 </div>
             </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Sonraki bakım km</label>
-                    <input type="number" name="next_service_km" class="form-control"
-                           value="{{ maintenance.next_service_km if maintenance else '' }}">
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Sonraki bakım tarihi</label>
-                    <input type="date" name="next_service_date" class="form-control"
-                           value="{{ maintenance.next_service_date if maintenance else '' }}">
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Maliyet (₺)</label>
-                    <input type="number" step="0.01" name="cost" class="form-control"
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Cost ($)</label>
+                    <input type="number" name="cost" class="form-control" placeholder="0" min="0" step="0.01"
                            value="{{ maintenance.cost if maintenance else '' }}">
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Servis</label>
-                    <input type="text" name="service_provider" class="form-control"
+                <div class="form-group">
+                    <label class="form-label">Service Provider / Mechanic</label>
+                    <input type="text" name="service_provider" class="form-control" placeholder="Garage or mechanic name..."
                            value="{{ maintenance.service_provider if maintenance else '' }}">
                 </div>
             </div>
-            <div class="mb-3">
-                <label class="form-label">Notlar</label>
-                <textarea name="notes" class="form-control" rows="3">{{ maintenance.notes if maintenance else '' }}</textarea>
+            {% if not quick %}
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Next Service Mileage <span style="color:var(--text-muted);font-weight:400;">(optional)</span></label>
+                    <input type="number" name="next_service_km" class="form-control"
+                           placeholder="E.g., 60000" min="0"
+                           value="{{ maintenance.next_service_km if maintenance and maintenance.next_service_km else '' }}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Next Service Date <span style="color:var(--text-muted);font-weight:400;">(optional)</span></label>
+                    <input type="date" name="next_service_date" class="form-control"
+                           value="{{ maintenance.next_service_date if maintenance and maintenance.next_service_date else '' }}">
+                </div>
             </div>
-            <button type="submit" class="btn btn-primary">Kaydet</button>
-            <a href="{{ url_for('vehicle_detail', vehicle_id=vehicle.id) }}" class="btn btn-secondary">İptal</a>
+            <div class="form-group">
+                <label class="form-label">Notes</label>
+                <textarea name="notes" class="form-control" rows="2"
+                          placeholder="Enter details or notes about the maintenance..."></textarea>
+            </div>
+            {% endif %}
+            <div style="display:flex;gap:0.75rem;justify-content:flex-end;margin-top:0.5rem;">
+                <a href="{{ url_for('vehicle_detail', vehicle_id=vehicle.id) }}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                    {% if action == 'add' %}Add Maintenance{% else %}Save Changes{% endif %}
+                </button>
+            </div>
         </form>
     </div>
 </div>
+<script>
+    const dateInput = document.getElementById('maintDate');
+    if (dateInput && !dateInput.value) {
+        dateInput.value = new Date().toISOString().split('T')[0];
+    }
+
+    // FUEL_SUGGESTIONS key names mapped to English app logic
+    const FUEL_SUGGESTIONS = {
+        'gasoline': ['Engine Oil Change', 'Oil Filter Replacement', 'Air Filter Replacement', 'Cabin Filter Replacement', 'Spark Plugs Replacement',
+                     'Timing Belt Replacement', 'Brake Pads Replacement', 'Brake Discs Inspection', 'Clutch Kit Replacement',
+                     'Battery Replacement', 'AC Gas Refill', 'Wheel Alignment', 'Tire Rotation', 'Periodic Maintenance'],
+        'diesel': ['Engine Oil Change', 'Oil Filter Replacement', 'Air Filter Replacement', 'Cabin Filter Replacement', 'Fuel Filter Replacement',
+                   'DPF Cleaning', 'Brake Pads Replacement', 'Brake Discs Inspection', 'Clutch Kit Replacement',
+                   'Battery Replacement', 'AC Gas Refill', 'Wheel Alignment', 'Timing Belt Replacement', 'Periodic Maintenance'],
+        'lpg': ['Engine Oil Change', 'LPG Filter Replacement', 'LPG System Service', 'Spark Plugs Replacement', 'Air Filter Replacement',
+                'Cabin Filter Replacement', 'Timing Belt Replacement', 'Brake Pads Replacement', 'Battery Replacement', 'Periodic Maintenance'],
+        'electric': ['Cabin Filter Replacement', 'Brake Pads Replacement', 'Tire Rotation',
+                     'Battery Health Check', 'Brake Fluid Inspection', 'Wheel Alignment', 'AC System Service', 'Software Update'],
+        'hybrid': ['Engine Oil Change', 'Air Filter Replacement', 'Cabin Filter Replacement', 'Brake Pads Replacement',
+                   'Hybrid Battery Diagnostics', 'Battery Replacement', 'AC Gas Refill', 'Periodic Maintenance'],
+    };
+
+    (function() {
+        const list = document.getElementById('maintenance-types');
+        if (!list) return;
+
+        // Normalizing dynamic fuel type value from backend to lowercase string comparison
+        const rawFuel = {{ vehicle.fuel_type | tojson }};
+        const ft = rawFuel ? rawFuel.toLowerCase() : 'gasoline';
+
+        // Fallback dictionary map to handle potential variations
+        const keyMap = {
+            'benzin': 'gasoline', 'gasoline': 'gasoline',
+            'dizel': 'diesel', 'diesel': 'diesel',
+            'lpg': 'lpg',
+            'elektrik': 'electric', 'electric': 'electric',
+            'hibrit': 'hybrid', 'hybrid': 'hybrid'
+        };
+
+        const targetKey = keyMap[ft] || 'gasoline';
+        const items = FUEL_SUGGESTIONS[targetKey] || FUEL_SUGGESTIONS['gasoline'];
+        list.innerHTML = items.map(s => `<option value="${s}">`).join('');
+    })();
+</script>
 {% endblock %}
