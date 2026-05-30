@@ -1,0 +1,467 @@
+{% extends "base.html" %}
+{% block title %}Vehicle Buyer's Guide{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+      --bg: #0f1117;
+      --surface: #181c27;
+      --surface2: #1e2333;
+      --accent: #f0a500;
+      --accent2: #e05c2a;
+      --text: #e8eaf0;
+      --muted: #8890a4;
+      --border: #272d3f;
+      --success: #2ecc71;
+      --danger: #e74c3c;
+      --warning: #f39c12;
+      --radius: 12px;
+      --font-head: 'Syne', sans-serif;
+      --font-body: 'DM Sans', sans-serif;
+    }
+
+    .bg-guide { background: var(--bg); min-height: 100vh; color: var(--text); font-family: var(--font-body); }
+
+    /* ── Hero ── */
+    .guide-hero {
+      background: linear-gradient(135deg, #13182a 0%, #1c1428 60%, #0f1117 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 3rem 0 2.5rem;
+      position: relative; overflow: hidden;
+    }
+    .guide-hero::before {
+      content: ''; position: absolute; top: -60px; right: -60px;
+      width: 340px; height: 340px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(240,165,0,.13) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: .45rem;
+      background: rgba(240,165,0,.12); border: 1px solid rgba(240,165,0,.25);
+      color: var(--accent); font-size: .75rem; font-weight: 600;
+      letter-spacing: .08em; text-transform: uppercase;
+      padding: .3rem .9rem; border-radius: 99px; margin-bottom: 1.1rem;
+    }
+    .hero-title {
+      font-family: var(--font-head); font-weight: 800; font-size: clamp(1.9rem, 4vw, 2.8rem);
+      line-height: 1.1; color: #fff; margin-bottom: .75rem;
+    }
+    .hero-title span { color: var(--accent); }
+    .hero-sub { color: var(--muted); font-size: 1rem; max-width: 520px; line-height: 1.6; }
+
+    /* ── Filter card ── */
+    .filter-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 2rem;
+    }
+    .filter-label {
+      font-size: .7rem; font-weight: 600; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: .45rem;
+    }
+    .filter-select {
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--text); border-radius: 8px; padding: .65rem 1rem;
+      font-family: var(--font-body); font-size: .95rem; width: 100%;
+      transition: border-color .2s; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238890a4' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right .9rem center; padding-right: 2.5rem;
+    }
+    .filter-select:focus { outline: none; border-color: var(--accent); }
+    .filter-select option { background: #1a1f30; }
+    .btn-search {
+      background: var(--accent); color: #0f1117;
+      font-family: var(--font-head); font-weight: 700; font-size: 1rem;
+      border: none; border-radius: 8px; padding: .65rem 2rem;
+      cursor: pointer; transition: background .2s, transform .1s;
+      display: inline-flex; align-items: center; gap: .5rem; white-space: nowrap;
+    }
+    .btn-search:hover { background: #ffc107; transform: translateY(-1px); }
+
+    /* ── Section header ── */
+    .section-header { display: flex; align-items: center; gap: .75rem; margin-bottom: 1.5rem; }
+    .section-icon {
+      width: 38px; height: 38px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; flex-shrink: 0;
+    }
+    .icon-score  { background: rgba(240,165,0,.15); }
+    .icon-fault  { background: rgba(231,76,60,.15); }
+    .icon-sched  { background: rgba(46,204,113,.15); }
+    .section-title { font-family: var(--font-head); font-weight: 700; font-size: 1.15rem; color: #fff; }
+    .section-sub { font-size: .8rem; color: var(--muted); margin-top: .1rem; }
+
+    /* ── Score card ── */
+    .score-card {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.75rem; margin-bottom: 1.5rem;
+    }
+    .score-main {
+      display: flex; align-items: center; gap: 1.5rem;
+      margin-bottom: 1.25rem; flex-wrap: wrap;
+    }
+    .score-circle {
+      width: 90px; height: 90px; border-radius: 50%; flex-shrink: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      border: 3px solid var(--accent);
+      background: rgba(240,165,0,.08);
+    }
+    .score-num { font-family: var(--font-head); font-size: 2rem; font-weight: 800; color: var(--accent); line-height:1; }
+    .score-lbl { font-size: .65rem; color: var(--muted); letter-spacing: .06em; }
+    .score-info { flex: 1; min-width: 200px; }
+    .verdict-pill {
+      display: inline-block; font-size: .75rem; font-weight: 700;
+      letter-spacing: .06em; text-transform: uppercase;
+      padding: .25rem .75rem; border-radius: 6px; margin-bottom: .6rem;
+    }
+    .verdict-excellent { background: rgba(46,204,113,.2);  color: #2ecc71; }
+    .verdict-good      { background: rgba(52,152,219,.2);  color: #3498db; }
+    .verdict-average   { background: rgba(243,156,18,.2);  color: #f39c12; }
+    .verdict-poor      { background: rgba(231,76,60,.2);   color: #e74c3c; }
+    .score-summary { font-size: .9rem; color: #b0b8cc; line-height: 1.6; }
+
+    /* Sub-scores */
+    .sub-scores { display: grid; grid-template-columns: repeat(4, 1fr); gap: .75rem; margin-bottom: 1.25rem; }
+    .sub-item { text-align: center; }
+    .sub-label { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: .35rem; }
+    .sub-bar-bg { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+    .sub-bar { height: 100%; border-radius: 3px; background: var(--accent); transition: width .6s ease; }
+    .sub-val { font-size: .8rem; font-weight: 600; color: var(--text); margin-top: .3rem; }
+
+    /* Pros/Cons */
+    .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .pc-box { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
+    .pc-title { font-size: .75rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; margin-bottom: .6rem; }
+    .pc-pros .pc-title { color: var(--success); }
+    .pc-cons .pc-title { color: var(--danger); }
+    .pc-list { list-style: none; padding: 0; margin: 0; }
+    .pc-list li { display: flex; align-items: flex-start; gap: .4rem; font-size: .83rem; color: #9ca3b5; padding: .2rem 0; }
+    .pc-pros .pc-list li::before { content: '✓'; color: var(--success); font-weight: 700; flex-shrink:0; }
+    .pc-cons .pc-list li::before { content: '✗'; color: var(--danger);  font-weight: 700; flex-shrink:0; }
+
+    /* Price / Target */
+    .meta-row { display: flex; gap: 1rem; margin-top: 1rem; flex-wrap: wrap; }
+    .meta-chip {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: .6rem 1rem;
+      font-size: .82rem; color: var(--text); flex: 1; min-width: 180px;
+    }
+    .meta-chip .chip-label { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing:.06em; margin-bottom:.25rem; }
+    .meta-chip .chip-val { font-weight: 600; }
+
+    /* ── Fault cards ── */
+    .fault-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; }
+    .fault-card {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.25rem;
+      border-left: 3px solid transparent; transition: transform .15s;
+    }
+    .fault-card:hover { transform: translateY(-2px); }
+    .fault-card.sev-high   { border-left-color: var(--danger); }
+    .fault-card.sev-medium { border-left-color: var(--warning); }
+    .fault-card.sev-low    { border-left-color: var(--success); }
+    .fault-top { display: flex; justify-content: space-between; align-items: flex-start; gap: .5rem; margin-bottom: .6rem; }
+    .fault-title { font-weight: 600; font-size: .95rem; color: var(--text); line-height: 1.35; }
+    .fault-badge {
+      font-size: .68rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+      padding: .2rem .55rem; border-radius: 5px; white-space: nowrap; flex-shrink: 0;
+    }
+    .sev-high   .fault-badge { background: rgba(231,76,60,.2);  color: #e74c3c; }
+    .sev-medium .fault-badge { background: rgba(243,156,18,.2); color: #f39c12; }
+    .sev-low    .fault-badge { background: rgba(46,204,113,.2); color: #2ecc71; }
+    .fault-cat  { font-size: .75rem; color: var(--muted); margin-bottom: .5rem; }
+    .fault-desc { font-size: .85rem; color: #9ca3b5; line-height: 1.55; }
+    .fault-km   { margin-top: .75rem; font-size: .78rem; color: var(--muted); display: flex; align-items: center; gap: .35rem; }
+    .empty-fault {
+      background: var(--surface2); border: 1px dashed var(--border);
+      border-radius: var(--radius); padding: 2.5rem; text-align: center; color: var(--muted);
+    }
+
+    /* ── Schedule table ── */
+    .sched-table-wrap { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .sched-table { width: 100%; border-collapse: collapse; }
+    .sched-table th {
+      background: rgba(240,165,0,.08); border-bottom: 1px solid var(--border);
+      padding: .85rem 1.25rem; font-size: .75rem; font-weight: 700;
+      letter-spacing: .08em; text-transform: uppercase; color: var(--accent); text-align: left;
+    }
+    .sched-table td { padding: .9rem 1.25rem; vertical-align: top; border-bottom: 1px solid rgba(255,255,255,.04); }
+    .sched-table tr:last-child td { border-bottom: none; }
+    .sched-table tr:hover td { background: rgba(255,255,255,.02); }
+    .km-pill {
+      display: inline-block; background: rgba(240,165,0,.12);
+      color: var(--accent); font-weight: 700; font-size: .8rem;
+      padding: .25rem .75rem; border-radius: 6px; white-space: nowrap;
+    }
+    .sched-items { list-style: none; padding: 0; margin: 0; }
+    .sched-items li { display: flex; align-items: flex-start; gap: .5rem; font-size: .88rem; color: var(--text); padding: .2rem 0; }
+    .sched-items li::before { content: '›'; color: var(--accent); font-weight: 700; flex-shrink:0; margin-top:.05rem; }
+
+    /* ── Intro ── */
+    .intro-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 3rem 2rem; text-align: center;
+    }
+    .intro-graphic { font-size: 3.5rem; margin-bottom: 1rem; animation: float 3s ease-in-out infinite; }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+    .intro-card h4 { font-family: var(--font-head); font-size: 1.3rem; color: #fff; margin-bottom: .6rem; }
+    .intro-card p  { color: var(--muted); font-size: .9rem; max-width: 380px; margin: 0 auto; line-height: 1.6; }
+
+    @media(max-width:768px) {
+      .sub-scores { grid-template-columns: repeat(2,1fr); }
+      .pros-cons  { grid-template-columns: 1fr; }
+    }
+    @media(max-width:576px) {
+      .fault-grid { grid-template-columns: 1fr; }
+      .filter-card { padding: 1.25rem; }
+      .guide-hero  { padding: 2rem 0 1.5rem; }
+      .score-circle { width: 72px; height: 72px; }
+      .score-num { font-size: 1.6rem; }
+    }
+</style>
+
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+
+<div class="bg-guide">
+
+    {# ── Hero ── #}
+    <div class="guide-hero">
+        <div class="container">
+            <div class="hero-badge">🔍 Vehicle Assessment</div>
+            <h1 class="hero-title">Used Car<br><span>Buyer's Guide</span></h1>
+            <p class="hero-sub">Select a model to view its overall score, known chronic issues, and a 200,000 km maintenance schedule.</p>
+        </div>
+    </div>
+
+    <div class="container py-4">
+
+        {# ── Filter ── #}
+        <div class="filter-card mb-4">
+            <form method="GET" action="{{ url_for('vehicle_buyer_guide') }}" id="guideForm">
+                <div class="row g-3 align-items-end">
+                    <div class="col-sm-5">
+                        <div class="filter-label">Brand</div>
+                        <select name="brand" id="brandSelect" class="filter-select" required>
+                            <option value="">— Select a brand —</option>
+                            {% for b in catalog_brands %}
+                            <option value="{{ b }}" {% if b == selected_brand %}selected{% endif %}>{{ b }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-sm-5">
+                        <div class="filter-label">Model</div>
+                        <select name="model" id="modelSelect" class="filter-select" required>
+                            <option value="">— Select a brand first —</option>
+                            {% if selected_brand and catalog_models[selected_brand] is defined %}
+                            {% for m in catalog_models[selected_brand] %}
+                            <option value="{{ m }}" {% if m == selected_model %}selected{% endif %}>{{ m }}</option>
+                            {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+                    <div class="col-sm-2">
+                        <button type="submit" class="btn-search w-100 justify-content-center">🔍 Search</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        {# ── Results ── #}
+        {% if selected_brand and selected_model %}
+
+        <h2 style="font-family:var(--font-head);font-size:1.5rem;color:#fff;margin-bottom:2rem;">
+            {{ selected_brand }} <span style="color:var(--accent)">{{ selected_model }}</span>
+            <span style="font-size:.9rem;font-weight:400;color:var(--muted);margin-left:.5rem;">— Overall Analysis</span>
+        </h2>
+
+        {# ── Overall Score Card ── #}
+        {% if guide_note %}
+        <div class="mb-4">
+            <div class="section-header">
+                <div class="section-icon icon-score">⭐</div>
+                <div>
+                    <div class="section-title">Overall Rating Score</div>
+                    <div class="section-sub">Based on reliability, comfort, performance, and economy criteria</div>
+                </div>
+            </div>
+
+            <div class="score-card">
+                {# Score + verdict + summary #}
+                <div class="score-main">
+                    <div class="score-circle">
+                        <div class="score-num">{{ guide_note.score }}</div>
+                        <div class="score-lbl">/ 100</div>
+                    </div>
+                    <div class="score-info">
+                        <div class="verdict-pill verdict-{{ guide_note.verdict }}">
+                            {% if guide_note.verdict == 'excellent' %}⭐ Excellent
+                            {% elif guide_note.verdict == 'good' %}👍 Good
+                            {% elif guide_note.verdict == 'average' %}➖ Average
+                            {% else %}⚠️ Poor{% endif %}
+                        </div>
+                        <div class="score-summary">{{ guide_note.summary }}</div>
+                    </div>
+                </div>
+
+                {# Sub-scores #}
+                <div class="sub-scores">
+                    {% set metrics = [
+                    ('Reliability', guide_note.reliability),
+                    ('Comfort',     guide_note.comfort),
+                    ('Performance', guide_note.performance),
+                    ('Economy',     guide_note.economy),
+                    ] %}
+                    {% for label, val in metrics %}
+                    <div class="sub-item">
+                        <div class="sub-label">{{ label }}</div>
+                        <div class="sub-bar-bg">
+                            <div class="sub-bar" style="width:{{ val }}%"></div>
+                        </div>
+                        <div class="sub-val">{{ val }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {# Pros / Cons #}
+                <div class="pros-cons">
+                    <div class="pc-box pc-pros">
+                        <div class="pc-title">✅ Pros</div>
+                        <ul class="pc-list">
+                            {% for p in guide_note.pros %}<li>{{ p }}</li>{% endfor %}
+                        </ul>
+                    </div>
+                    <div class="pc-box pc-cons">
+                        <div class="pc-title">❌ Cons</div>
+                        <ul class="pc-list">
+                            {% for c in guide_note.cons %}<li>{{ c }}</li>{% endfor %}
+                        </ul>
+                    </div>
+                </div>
+
+                {# Price + Target buyer #}
+                <div class="meta-row">
+                    {% if guide_note.price_min_tl %}
+                    <div class="meta-chip">
+                        <div class="chip-label">💰 Estimated Used Price</div>
+                        <div class="chip-val">
+                            {{ "{:,}".format(guide_note.price_min_tl) }}
+                            — {{ "{:,}".format(guide_note.price_max_tl) }}
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if guide_note.target_buyer %}
+                    <div class="meta-chip">
+                        <div class="chip-label">👤 Target Buyer</div>
+                        <div class="chip-val">{{ guide_note.target_buyer }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {# ── Chronic Issues ── #}
+        <div class="mb-4">
+            <div class="section-header">
+                <div class="section-icon icon-fault">⚠️</div>
+                <div>
+                    <div class="section-title">Chronic Issues &amp; Known Weak Points</div>
+                    <div class="section-sub">Faults frequently reported by real owners of this model</div>
+                </div>
+            </div>
+
+            {% if chronic_faults %}
+            <div class="fault-grid">
+                {% for f in chronic_faults %}
+                <div class="fault-card sev-{{ f.severity }}">
+                    <div class="fault-top">
+                        <div class="fault-title">{{ f.title }}</div>
+                        <div class="fault-badge">
+                            {% if f.severity == 'high' %}High
+                            {% elif f.severity == 'medium' %}Medium
+                            {% else %}Low{% endif %}
+                        </div>
+                    </div>
+                    <div class="fault-cat">📂 {{ f.category_label }}</div>
+                    <div class="fault-desc">{{ f.description }}</div>
+                    {% if f.approx_km %}
+                    <div class="fault-km">🔧 May appear around {{ "{:,}".format(f.approx_km) }} km</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-fault">
+                <div style="font-size:2rem;margin-bottom:.6rem;opacity:.5">✅</div>
+                <div style="font-weight:600;color:var(--text);margin-bottom:.4rem;">No known chronic issues on record</div>
+                <div style="font-size:.85rem;">There are no widespread faults recorded in our database for this model. We still recommend a thorough inspection before any used car purchase.</div>
+            </div>
+            {% endif %}
+        </div>
+
+        {# ── Maintenance Schedule ── #}
+        {% if maintenance_schedule %}
+        <div class="mb-5">
+            <div class="section-header">
+                <div class="section-icon icon-sched">📋</div>
+                <div>
+                    <div class="section-title">200,000 km Maintenance Schedule</div>
+                    <div class="section-sub">Recommended service items at each periodic interval</div>
+                </div>
+            </div>
+            <div class="sched-table-wrap">
+                <table class="sched-table">
+                    <thead>
+                    <tr><th style="width:140px">Mileage</th><th>Service Items</th></tr>
+                    </thead>
+                    <tbody>
+                    {% for entry in maintenance_schedule %}
+                    <tr>
+                        <td><span class="km-pill">{{ entry.km }} km</span></td>
+                        <td>
+                            <ul class="sched-items">
+                                {% for item in entry.service_items %}<li>{{ item }}</li>{% endfor %}
+                            </ul>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <p style="font-size:.78rem;color:var(--muted);margin-top:.85rem;">
+                * Service intervals are general guidelines. They may vary based on manufacturer recommendations and driving conditions.
+            </p>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="intro-card">
+            <div class="intro-graphic">🚗</div>
+            <h4>Select a vehicle to get started</h4>
+            <p>Choose a brand and model to see its overall score, chronic issues, and maintenance schedule up to 200,000 km.</p>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+
+<script>
+    (function () {
+      const catalogModels = {{ catalog_models | tojson }};
+      const brandSel = document.getElementById('brandSelect');
+      const modelSel = document.getElementById('modelSelect');
+
+      function populateModels(brand, preselect) {
+        modelSel.innerHTML = '';
+        modelSel.appendChild(new Option('— Select a model —', ''));
+        (catalogModels[brand] || []).forEach(m => {
+          const opt = new Option(m, m);
+          if (m === preselect) opt.selected = true;
+          modelSel.appendChild(opt);
+        });
+      }
+
+      brandSel.addEventListener('change', () => populateModels(brandSel.value, null));
+      if (brandSel.value) populateModels(brandSel.value, "{{ selected_model | default('') | e }}");
+    })();
+</script>
+{% endblock %}
